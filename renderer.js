@@ -60,7 +60,7 @@ export class ArenaRenderer {
     for (const [key, time] of this.seen) if (game.time - time > 2) this.seen.delete(key);
     this.visualEffects = this.visualEffects.slice(-160);
   }
-  draw(canvas, boardIndex, selected, selectedEnemy) {
+  draw(canvas, boardIndex, selected, selectedEnemy, selectedIds = [], dragStart = null, dragNow = null) {
     const game = this.current;
     if (!game || !canvas || !game.boards[boardIndex]) return;
     const ctx = canvas.getContext('2d');
@@ -102,7 +102,7 @@ export class ArenaRenderer {
       const c = { ...original, x: old.x + (original.x - old.x) * blend, y: old.y + (original.y - old.y) * blend };
       this.positions.set(c.id, { x: c.x, y: c.y - (this.art.ready ? 23 : 0) });
       const type = CHAMPIONS[c.base].type, color = elementColors[type];
-      if (c.id === selected) {
+      if (c.id === selected || selectedIds.includes(c.id)) {
         ctx.fillStyle = '#b9f66d0a'; ctx.strokeStyle = '#b9f66d55'; ctx.lineWidth = 1;
         ctx.beginPath(); ctx.arc(c.x, c.y, stats(c).range / game.mapScale, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
         ctx.strokeStyle = '#d4fba1'; ctx.lineWidth = 2; ctx.setLineDash([5, 4]);
@@ -114,7 +114,7 @@ export class ArenaRenderer {
         }
       }
       ctx.fillStyle = '#060e0aaa'; ctx.beginPath(); ctx.ellipse(c.x, c.y + 14, 24, 9, 0, 0, Math.PI * 2); ctx.fill();
-      ctx.strokeStyle = COLORS[c.tier] + 'a0'; ctx.lineWidth = c.id === selected ? 2 : 1;
+      ctx.strokeStyle = COLORS[c.tier] + 'a0'; ctx.lineWidth = (c.id === selected || selectedIds.includes(c.id)) ? 2 : 1;
       ctx.beginPath(); ctx.ellipse(c.x, c.y + 12, 25, 9, 0, 0, Math.PI * 2); ctx.stroke();
       const ally = game.mode === 'coop' && owner !== game.players[0];
       if (this.art.ready) this.drawCharacterSprite(ctx, c, type, ally);
@@ -125,10 +125,14 @@ export class ArenaRenderer {
       }
       ctx.fillStyle = COLORS[c.tier];
       for (let i = 0; i <= c.tier; i++) ctx.fillRect(c.x - c.tier * 3 + i * 6 - 1.5, c.y + 26, 3, 3);
-      if (c.id === selected) {
+      if (c.id === selected || selectedIds.includes(c.id)) {
         ctx.font = '10px sans-serif'; ctx.fillStyle = '#d2e2cb'; ctx.fillText(CHAMPIONS[c.base].name, c.x, c.y + 43);
         if (game.mode === 'coop') { ctx.font = '9px sans-serif'; ctx.fillStyle = '#9bac99'; ctx.fillText(owner.name, c.x, c.y + 55); }
       }
+    }
+    if (dragStart && dragNow) {
+      const x=Math.min(dragStart.x,dragNow.x), y=Math.min(dragStart.y,dragNow.y), w=Math.abs(dragNow.x-dragStart.x), h=Math.abs(dragNow.y-dragStart.y);
+      ctx.save(); ctx.fillStyle='#b9f66d18'; ctx.strokeStyle='#d4fba1'; ctx.lineWidth=2; ctx.setLineDash([8,5]); ctx.fillRect(x,y,w,h); ctx.strokeRect(x,y,w,h); ctx.setLineDash([]); ctx.restore();
     }
     for (const m of board.monsters) {
       const old = previousMonsters.get(m.id) || m;
