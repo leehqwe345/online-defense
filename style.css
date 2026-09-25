@@ -22,3 +22,6 @@
 .panel{box-shadow:0 5px 18px #0002}.arena-wrap{box-shadow:0 0 40px #b1db6608,inset 0 0 30px #0005;border-color:#526244}
 @media(max-width:800px){.detail-character{height:180px}.catalog-portrait{aspect-ratio:307/430}#heroes.inventory{grid-template-columns:repeat(auto-fill,minmax(96px,1fr))}}
 .preview-attack{display:block;width:100%;font-size:11px;color:#c4dda2;margin-top:14px;background:#273327;border-color:#4a6140;padding:10px}.preview-attack:hover{background:#364a2e}#animation-preview{max-width:770px;padding:26px}#animation-preview h2{margin:12px 0 8px}#animation-preview canvas{width:100%;display:block;border:1px solid #536443;border-radius:8px;background:#13241c}.preview-legend{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:14px;color:#96ab89;font-size:11px}
+
+/* Inventory drag-to-equip */
+#items [data-item]{cursor:grab}#items [data-item]:active{cursor:grabbing}#items [data-item].dragging{opacity:.45}.item-option{display:inline-block;margin-top:5px;color:#c7d6c5;font-weight:600}.item-option-detail{display:inline-block;margin:7px 0;color:#d8f7ad;font-size:14px}[data-select].equip-drop{outline:2px solid #d4fba1;box-shadow:0 0 0 4px #b9f66d22,0 0 22px #b9f66d44;transform:translateY(-2px)}
