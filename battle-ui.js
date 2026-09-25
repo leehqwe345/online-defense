@@ -11,6 +11,21 @@ const html = (selector, value) => {
   if (el && el._lastHTML !== value) { el.innerHTML = value; el._lastHTML = value; }
 };
 let lastDetailKey = '', selectedTarget = null;
+function itemEffectText(item) {
+  const p = 1.6 ** item.tier, effect = ITEMS[item.base].effect;
+  return [
+    `공격력 +${(10*p).toFixed(1)}`,
+    `공격속도 +${(12*p).toFixed(1)}%`,
+    `사거리 +${(20*p).toFixed(0)}`,
+    `치명타 확률 +${(6*p).toFixed(1)}%p`,
+    `치명타 배율 +${(0.2*p).toFixed(2)}배`,
+    `물리 방어관통 +${(8*p).toFixed(1)}%p`,
+    `마법 방어관통 +${(8*p).toFixed(1)}%p`,
+    `공격대상 +${Math.max(1,Math.floor(p/2))}명`,
+    `둔화 +${(12*p).toFixed(1)}%p`,
+    `방어 저항 감소 +${(12*p).toFixed(1)}%p`
+  ][effect];
+}
 
 export function installBattleTools(game) {
   lastDetailKey = '';
@@ -69,7 +84,7 @@ export function updateCombat(game, room, user, selected, selectedItem, boardInde
   const slot = $('#item-slot-filter').value;
   const itemMergeOnly = $('#item-merge-only').checked;
   const items = p.items.filter(i => (slot === 'all' || ITEMS[i.base].slot === Number(slot)) && (!itemMergeOnly || mergePartner(p.items, i)));
-  html('#items', items.map(i => `<button data-item="${i.id}" class="${selectedItem === i.id ? 'selected' : ''}" style="--tier:${COLORS[i.tier]}">${ITEMS[i.base].name}<br><small style="color:${COLORS[i.tier]}">${TIERS[i.tier]} ${mergePartner(p.items, i) ? '· 합성 가능 ↑' : ''}</small></button>`).join('') || `<span class="muted">${p.items.length ? '조건에 맞는 장비가 없습니다.' : '장비를 뽑아 챔피언의 능력을 강화하세요.'}</span>`);
+  html('#items', items.map(i => `<button draggable="true" data-item="${i.id}" class="${selectedItem === i.id ? 'selected' : ''}" style="--tier:${COLORS[i.tier]}">${ITEMS[i.base].name}<br><small style="color:${COLORS[i.tier]}">${TIERS[i.tier]} ${mergePartner(p.items, i) ? '· 합성 가능 ↑' : ''}</small><br><small class="item-option">${itemEffectText(i)}</small></button>`).join('') || `<span class="muted">${p.items.length ? '조건에 맞는 장비가 없습니다.' : '장비를 뽑아 챔피언의 능력을 강화하세요.'}</span>`);
   html('#upgrades', ['hero', 'item'].map(kind => {
     const level = p[kind === 'hero' ? 'heroLevel' : 'itemLevel'];
     return `<div class="upgrade"><span>${kind === 'hero' ? '챔피언' : '장비'} 상점 Lv.${level}</span><button data-upgrade="${kind}" ${!editable || level >= 10 || p.gold < level * 40 ? 'disabled' : ''}>${level >= 10 ? 'MAX' : `${level * 40} G ↑`}</button></div>`;
@@ -101,7 +116,7 @@ function renderDetail(game, player, selected, selectedItem, editable, abilities,
   lastDetailKey = key;
   if (item) {
     const partner = mergePartner(player.items, item);
-    html('#detail', `<h3 style="color:${COLORS[item.tier]}">${ITEMS[item.base].name} · ${TIERS[item.tier]}</h3><p class="muted">${effects[ITEMS[item.base].effect]}<br>장착 대상을 선택하세요.</p><select id="equip-target" aria-label="장착 대상">${player.champions.map(c => `<option value="${c.id}">${CHAMPIONS[c.base].name} (${TIERS[c.tier]})</option>`).join('')}</select><div class="draw-row"><button id="equip" ${!editable || !player.champions.length ? 'disabled' : ''}>장착</button><button data-merge="item" data-id="${item.id}" ${!editable || !partner ? 'disabled' : ''}>2개 합성 ↑</button></div><p class="muted merge-hint">${partner ? `${TIERS[item.tier + 1]} 등급으로 확정 합성` : item.tier === 6 ? '최고 등급입니다.' : '동일 이름·등급의 장비가 1개 더 필요합니다.'}</p>`);
+    html('#detail', `<h3 style="color:${COLORS[item.tier]}">${ITEMS[item.base].name} · ${TIERS[item.tier]}</h3><p class="muted">${effects[ITEMS[item.base].effect]}<br><strong class="item-option-detail">${itemEffectText(item)}</strong><br>챔피언 카드로 드래그하거나 아래에서 장착 대상을 선택하세요.</p><select id="equip-target" aria-label="장착 대상">${player.champions.map(c => `<option value="${c.id}">${CHAMPIONS[c.base].name} (${TIERS[c.tier]})</option>`).join('')}</select><div class="draw-row"><button id="equip" ${!editable || !player.champions.length ? 'disabled' : ''}>장착</button><button data-merge="item" data-id="${item.id}" ${!editable || !partner ? 'disabled' : ''}>2개 합성 ↑</button></div><p class="muted merge-hint">${partner ? `${TIERS[item.tier + 1]} 등급으로 확정 합성` : item.tier === 6 ? '최고 등급입니다.' : '동일 이름·등급의 장비가 1개 더 필요합니다.'}</p>`);
     if (player.champions.some(c => String(c.id) === selectedTarget)) $('#equip-target').value = selectedTarget;
     return;
   }
