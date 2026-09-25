@@ -33,6 +33,3 @@
 #monster-preview select{width:100%;padding:10px;color:#e4eddb;background:#1e3025;border:1px solid #536c55;border-radius:8px}
 #monster-preview .preview-legend{flex-wrap:wrap;gap:12px}
 #monster-preview .preview-legend>div{display:flex;gap:6px;flex-wrap:wrap}
-
-/* Compact battle layout */
-.battle-layout{grid-template-columns:minmax(0,900px) 320px;justify-content:center;align-items:start}.arena-wrap{max-width:900px;margin:0 auto}.summon-panel{max-width:900px;margin:12px auto 0}.summon-head{display:grid;grid-template-columns:120px minmax(0,420px);align-items:center;gap:16px}.summon-head .draw-row{margin-top:0}.summon-panel #upgrades{display:grid;grid-template-columns:1fr 1fr;gap:12px}.summon-panel .primary{max-width:280px}.battle-side #detail{order:-1}@media(max-width:1100px){.battle-layout{grid-template-columns:minmax(0,1fr) 280px}.arena-wrap,.summon-panel{max-width:100%}}@media(max-width:800px){.battle-layout{display:block}.battle-side{margin-top:12px}.summon-head{grid-template-columns:1fr}.summon-panel #upgrades{grid-template-columns:1fr}}
