@@ -30,8 +30,8 @@ export function controlAction(game, player, request) {
   }
   if (request.type === 'speed') {
     if (game.mode !== 'single') return '배속은 싱글 모드에서만 사용할 수 있습니다.';
-    if (![1, 2, 3].includes(request.value)) return '배속은 1, 2, 3 중 선택하세요.';
-    game.speed = request.value;
+    if (request.value !== 2) return '기본 전투 속도는 2배속입니다.';
+    game.speed = 2;
     return null;
   }
   if (request.type === 'formation') {
@@ -65,7 +65,7 @@ export function sortTargets(monsters, priority, effectiveness) {
 
 export function stepGame(game, realDelta, tick) {
   if (game.status !== 'playing') return;
-  const multiplier = game.mode === 'single' ? game.speed || 1 : 1;
+  const multiplier = game.mode === 'single' ? 2 : 1;
   // Substeps keep fire rate, status durations and spawn checks identical at every speed.
   let remaining = realDelta * multiplier;
   while (remaining > 0.000001 && game.status === 'playing') {
