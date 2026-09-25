@@ -107,3 +107,10 @@ npm test
 - `style.css`: 반응형 다크 UI
 - `engine.test.js`, `gameplay.test.js`, `server.test.js`: 자동화 검증
 - `simulate.mjs`, `balance-report.mjs`: 자동 플레이 및 체력 비교
+
+
+## 몬스터 연출 업데이트 v0.4
+
+일반 몬스터 10종과 보스 2종의 생성 이미지를 적용했습니다. 피격 시 반동·섬광·스쿼시, 사망 시 쓰러짐·축소·영혼 소멸을 표시합니다. 독과 광역 처치, 최종 라운드 승리에도 연출이 남으며 사망 이미지는 몬스터 수에 포함하지 않습니다. 전장 브리핑의 **몬스터 피격·사망 보기** 버튼으로 종류별 미리보기를 열 수 있습니다.
+
+이미지 원본과 프롬프트: `assets/MONSTER-GENERATION.md`. 추가 검증: `node --test monster-visuals.test.js`.

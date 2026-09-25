@@ -1,4 +1,4 @@
-import { portraitMarkup } from './art.js';
+import { portraitMarkup, monsterPortraitMarkup, monsterName } from './art.js';
 import { CHAMPIONS, ITEMS, TIERS, COLORS, SLOTS, IMMUNITIES, chances, stats, monsterProfile } from './engine.js';
 import { TARGETS, mergePartner } from './gameplay.js';
 
@@ -43,7 +43,7 @@ export function installBattleTools(game) {
   $('.arena-wrap').insertAdjacentHTML('beforeend', '<div class="arena-state" id="arena-state" hidden></div><div class="wave-announcement" id="wave-announcement" role="status"></div>');
   $('#heroes').insertAdjacentHTML('beforebegin', '<div class="inventory-tools"><input id="hero-search" placeholder="보유 챔피언 검색" aria-label="보유 챔피언 검색"><label><input type="checkbox" id="hero-merge-only"> 합성 가능만</label></div>');
   $('#items').insertAdjacentHTML('beforebegin', `<div class="inventory-tools"><select id="item-slot-filter" aria-label="가방 부위 필터"><option value="all">모든 부위</option>${SLOTS.map((s, i) => `<option value="${i}">${s}</option>`).join('')}</select><label><input type="checkbox" id="item-merge-only"> 합성 가능만</label></div>`);
-  $('#briefing').insertAdjacentHTML('afterend', '<div id="wave-preview" class="wave-preview"></div><div id="inspect-enemy" class="enemy-inspector"></div>');
+  $('#briefing').insertAdjacentHTML('afterend', '<button class="preview-attack" data-monster-preview="true">몬스터 피격·사망 보기 ↗</button><div id="wave-preview" class="wave-preview"></div><div id="inspect-enemy" class="enemy-inspector"></div>');
 }
 
 export function updateCombat(game, room, user, selected, selectedItem, boardIndex, connected, abilities, effects, selectedEnemy) {
@@ -95,7 +95,7 @@ export function updateCombat(game, room, user, selected, selectedItem, boardInde
   const profile = monsterProfile(game, next);
   html('#wave-preview', `<span class="eyebrow">${game.round === 100 ? 'FINAL WAVE' : 'NEXT INTEL'}</span><p>${next}라운드 · 일반 HP ${Math.ceil(profile.hp).toLocaleString()}${next % 10 === 0 ? '<br>보스 1마리 포함' : ''}</p><span class="defense-chip">${game.random ? '무작위 방어속성' : IMMUNITIES[(next - 1) % 10]}</span>${game.hard ? `<span class="defense-chip">추가 방어 최대 ${game.hard}개</span>` : ''}`);
   const enemy = board.monsters.find(m => m.id === selectedEnemy);
-  html('#inspect-enemy', enemy ? `<h3>${enemy.boss ? '보스' : '몬스터'} #${enemy.id}</h3><p class="muted">HP ${Math.max(0, Math.ceil(enemy.hp)).toLocaleString()} / ${Math.ceil(enemy.maxHp).toLocaleString()}</p>${enemy.defenses.map(d => `<span class="defense-chip">${d}</span>`).join('')}` : '<p class="muted">길 위의 몬스터를 클릭하면 방어속성을 확인할 수 있습니다.</p>');
+  html('#inspect-enemy', enemy ? `${monsterPortraitMarkup(enemy)}<h3>${monsterName(enemy)}</h3><p class="muted">${enemy.boss ? '보스' : '몬스터'} #${enemy.id} · HP ${Math.max(0, Math.ceil(enemy.hp)).toLocaleString()} / ${Math.ceil(enemy.maxHp).toLocaleString()}</p>${enemy.defenses.map(d => `<span class="defense-chip">${d}</span>`).join('')}` : '<p class="muted">길 위의 몬스터를 클릭하면 외형과 방어속성을 확인할 수 있습니다.</p>');
   renderDetail(game, p, selected, selectedItem, editable, abilities, effects);
 }
 

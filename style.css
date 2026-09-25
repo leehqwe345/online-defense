@@ -25,3 +25,11 @@
 
 /* Inventory drag-to-equip */
 #items [data-item]{cursor:grab}#items [data-item]:active{cursor:grabbing}#items [data-item].dragging{opacity:.45}.item-option{display:inline-block;margin-top:5px;color:#c7d6c5;font-weight:600}.item-option-detail{display:inline-block;margin:7px 0;color:#d8f7ad;font-size:14px}[data-select].equip-drop{outline:2px solid #d4fba1;box-shadow:0 0 0 4px #b9f66d22,0 0 22px #b9f66d44;transform:translateY(-2px)}
+.monster-portrait{display:block;width:108px;aspect-ratio:1.125;background-image:url('/assets/monsters-v4.png');background-size:400% 300%;background-repeat:no-repeat;margin:4px auto 12px}
+#monster-preview{width:min(780px,94vw);max-height:92vh;overflow:auto;border:1px solid #536c55;border-radius:16px;background:#101e1a;color:#e4eddb;padding:24px}
+#monster-preview::backdrop{background:#020b0bdd;backdrop-filter:blur(5px)}
+#monster-preview canvas{display:block;width:100%;height:auto;border-radius:12px;margin:16px 0;background:#101c1b}
+#monster-preview label{display:block;margin-bottom:6px;color:#adc19f;font-size:12px}
+#monster-preview select{width:100%;padding:10px;color:#e4eddb;background:#1e3025;border:1px solid #536c55;border-radius:8px}
+#monster-preview .preview-legend{flex-wrap:wrap;gap:12px}
+#monster-preview .preview-legend>div{display:flex;gap:6px;flex-wrap:wrap}

@@ -1,8 +1,8 @@
 import { CHAMPIONS, COLORS, stats, position } from './engine.js';
-import { ArtAssets } from './art.js';
+import { ArtAssets, MONSTER_NAMES, monsterName } from './art.js';
+import { MonsterVisuals } from './monster-visuals.js';
 
 const elementColors = ['#edcb87', '#b9dc89', '#e3b09b', '#78d2ed', '#ffad6c', '#ceb992', '#88debd', '#acd76f', '#ecba79', '#c8a5f2'];
-const enemyColors = ['#92ad79', '#ad9b7b', '#b18771', '#73acbd', '#cc8862', '#a19a74', '#9c8db2', '#ae7ea0', '#78a995', '#b3a67e'];
 
 // An isolated animation viewer. It never sends gameplay actions or changes a room.
 export function openAnimationPreview(base, tier = 0) {
@@ -26,6 +26,7 @@ export function openAnimationPreview(base, tier = 0) {
     if (time >= nextShot && renderer.art.ready) {
       nextShot = time + Math.max(0.55, 1 / stats(champion).speed);
       const point = position(target.p);
+      target.hurt = { born: time, type: CHAMPIONS[base].type, dx: 0, dy: -1 };
       game.effects = [{ source: 1, x: champion.x, y: champion.y, tx: point.x, ty: point.y, born: time, until: time + 0.3, amount: Math.round(stats(champion).attack), type: CHAMPIONS[base].type, board: 0 }];
     }
     renderer.receive(game); renderer.draw(scene, 0, 1, 2);
@@ -36,20 +37,60 @@ export function openAnimationPreview(base, tier = 0) {
   frameId = requestAnimationFrame(loop);
 }
 
+export function openMonsterPreview() {
+  document.querySelector('#monster-preview')?.close();
+  const dialog = document.createElement('dialog'); dialog.id = 'monster-preview';
+  dialog.setAttribute('aria-label', '몬스터 피격·사망 미리보기');
+  dialog.innerHTML = `<span class="eyebrow">BESTIARY / REACTION STUDY</span><h2>몬스터 피격 · 사망</h2><p>실제 전투와 같은 이미지·연출로 재생합니다.</p><label for="preview-monster">몬스터 종류</label><select id="preview-monster">${MONSTER_NAMES.map((name, i) => `<option value="${i}">${i >= 10 ? '보스 · ' : ''}${name}</option>`).join('')}</select><canvas width="700" height="400" aria-label="몬스터 반응 애니메이션"></canvas><div class="preview-legend"><span id="monster-preview-state" role="status">이미지 불러오는 중</span><div><button class="mini-btn" data-reaction="hit">피격 재생</button><button class="mini-btn" data-reaction="death">사망 재생</button><button class="mini-btn" id="monster-preview-close">닫기 ×</button></div></div>`;
+  document.body.append(dialog); dialog.showModal();
+  const renderer = new ArenaRenderer(), scene = document.createElement('canvas'); scene.width = scene.height = 800;
+  const canvas = dialog.querySelector('canvas'), ctx = canvas.getContext('2d');
+  let frameId, last = performance.now(), time = 0, phase = 0, id = 1, dead = false, hurt = null, deaths = [];
+  let hitDone = false, deathDone = false, requested = null;
+  const reset = () => { phase = 0; id++; dead = false; hurt = null; deaths = []; hitDone = false; deathDone = false; renderer.current = null; };
+  dialog.querySelector('select').onchange = reset;
+  dialog.querySelectorAll('[data-reaction]').forEach(button => { button.onclick = () => { reset(); requested = button.dataset.reaction; }; });
+  dialog.querySelector('#monster-preview-close').onclick = () => dialog.close();
+  dialog.addEventListener('close', () => { cancelAnimationFrame(frameId); dialog.remove(); }, { once: true });
+  const loop = now => {
+    if (!dialog.open) return;
+    const dt = Math.min(0.05, (now - last) / 1000); last = now; time += dt;
+    if (renderer.art.monstersReady) phase += dt;
+    if (phase > 5) reset();
+    const index = Number(dialog.querySelector('select').value), boss = index >= 10;
+    const monster = { id, family: index % 10, round: index === 11 ? 20 : 10, boss, p: 0.125, hp: 100, maxHp: 100, slow: 0, stun: 0 };
+    if (renderer.art.monstersReady && ((!hitDone && phase >= 1) || requested === 'hit')) { hurt = { born: time, type: 2, dx: 1, dy: 0 }; hitDone = true; }
+    if (renderer.art.monstersReady && ((!deathDone && phase >= 2.8) || requested === 'death')) {
+      hurt = { born: time, type: 2, dx: 1, dy: 0 }; dead = deathDone = true;
+      deaths = [{ ...monster, hurt, board: 0, born: time, until: time + 1.5 }];
+    }
+    if (requested && renderer.art.monstersReady) { phase = requested === 'hit' ? 1 : 2.8; requested = null; }
+    monster.hurt = hurt; if (hitDone) monster.hp = 65;
+    const game = { time, status: 'playing', mode: 'single', mapScale: 1, players: [], boards: [{ monsters: dead ? [] : [monster], spawn: [] }], effects: [], deaths: deaths.filter(e => e.until > time) };
+    renderer.receive(game); renderer.draw(scene, 0, null, null);
+    ctx.clearRect(0, 0, canvas.width, canvas.height); ctx.drawImage(scene, 230, 0, 340, 194, 0, 0, canvas.width, canvas.height);
+    dialog.querySelector('#monster-preview-state').textContent = `${monsterName(monster)} · ${!renderer.art.monstersReady ? '불러오는 중' : dead ? '붕괴 → 영혼 소멸' : hitDone ? '피격 → 복귀' : '대기'}`;
+    frameId = requestAnimationFrame(loop);
+  };
+  frameId = requestAnimationFrame(loop);
+}
+
 export class ArenaRenderer {
   constructor() {
     this.previous = null; this.current = null; this.received = 0; this.positions = new Map();
     this.art = new ArtAssets(); this.attacks = new Map(); this.seen = new Map(); this.visualEffects = [];
+    this.monsterVisuals = new MonsterVisuals(this.art);
     this.clock = 0; this.lastFrame = performance.now();
   }
   receive(game) {
-    if (!this.current) { this.attacks.clear(); this.seen.clear(); this.visualEffects = []; }
+    if (!this.current) { this.attacks.clear(); this.seen.clear(); this.visualEffects = []; this.monsterVisuals.reset(); }
     this.previous = this.current;
     this.current = game;
     this.received = performance.now();
+    this.monsterVisuals.receive(game, this.clock);
     for (const effect of game.effects) {
       const source = effect.source ?? game.players.flatMap(p => p.champions).find(c => Math.hypot(c.x - effect.x, c.y - effect.y) < 32)?.id;
-      const key = `${source}:${effect.born}:${effect.tx}:${effect.ty}`;
+      const key = `${source}:${effect.target}:${effect.born}:${effect.tx}:${effect.ty}`;
       if (this.seen.has(key)) continue;
       this.seen.set(key, game.time);
       const shot = { ...effect, source, start: this.clock };
@@ -65,7 +106,7 @@ export class ArenaRenderer {
     if (!game || !canvas || !game.boards[boardIndex]) return;
     const ctx = canvas.getContext('2d');
     const now = performance.now();
-    if (game.status === 'playing') this.clock += Math.min(0.05, (now - this.lastFrame) / 1000);
+    if (game.status !== 'paused') this.clock += Math.min(0.05, (now - this.lastFrame) / 1000);
     this.lastFrame = now;
     const blend = Math.min(1, (performance.now() - this.received) / 100);
     const previousBoard = this.previous?.boards[boardIndex];
@@ -138,24 +179,10 @@ export class ArenaRenderer {
       const old = previousMonsters.get(m.id) || m;
       const progress = old.p + ((m.p - old.p + 1) % 1) * blend;
       const { x, y } = position(progress);
-      this.positions.set(m.id, { x, y });
-      const size = m.boss ? 22 : 11;
-      ctx.save(); ctx.translate(x, y);
-      ctx.fillStyle = '#0007'; ctx.beginPath(); ctx.ellipse(1, size, size + 2, 5, 0, 0, Math.PI * 2); ctx.fill();
-      ctx.fillStyle = m.slow > 0 ? '#75c4df' : enemyColors[m.family];
-      ctx.strokeStyle = m.boss ? '#ffd998' : '#d8e3ba80'; ctx.lineWidth = m.boss ? 2 : 1;
-      const sides = m.boss ? 8 : [6, 4, 5][m.family % 3];
-      ctx.beginPath();
-      for (let i = 0; i < sides; i++) { const a = i * Math.PI * 2 / sides; ctx.lineTo(Math.cos(a) * size, Math.sin(a) * size); }
-      ctx.closePath(); ctx.fill(); ctx.stroke();
-      ctx.fillStyle = '#15231e'; ctx.fillRect(-5, -3, 3, 3); ctx.fillRect(3, -3, 3, 3);
-      if (m.boss) { ctx.fillStyle = '#ffdc94'; ctx.font = 'bold 10px sans-serif'; ctx.fillText('BOSS', 0, -size - 13); }
-      if (m.id === selectedEnemy) { ctx.strokeStyle = '#fff2b4'; ctx.beginPath(); ctx.arc(0, 0, size + 6, 0, Math.PI * 2); ctx.stroke(); }
-      if (m.stun > 0) { ctx.fillStyle = '#c8efff'; ctx.font = '15px sans-serif'; ctx.fillText('✧', 0, -size - 7); }
-      ctx.fillStyle = '#08120e'; ctx.fillRect(-size, -size - 7, size * 2, 4);
-      ctx.fillStyle = m.boss ? '#ffcd78' : '#b9e388'; ctx.fillRect(-size, -size - 7, size * 2 * Math.max(0, m.hp / m.maxHp), 4);
-      ctx.restore();
+      this.positions.set(m.id, { x, y: y - 8 });
+      this.monsterVisuals.drawMonster(ctx, m, boardIndex, x, y, this.clock, m.id === selectedEnemy);
     }
+    this.monsterVisuals.drawDeaths(ctx, boardIndex, this.clock);
     if (this.art.ready) this.drawImageEffects(ctx, boardIndex);
     for (const e of (this.art.ready ? [] : game.effects.filter(e => e.board === boardIndex).slice(-100))) {
       const elapsed = Math.max(0, game.time - (e.born || game.time) + blend * 0.08);
@@ -204,13 +231,15 @@ export class ArenaRenderer {
       if (e.board !== boardIndex) continue;
       const age = this.clock - e.start;
       const type = e.type ?? 0;
-      const angle = Math.atan2(e.ty - e.y, e.tx - e.x);
+      const target = this.positions.get(e.target);
+      const tx = target?.x ?? e.tx, ty = target?.y ?? e.ty;
+      const angle = Math.atan2(ty - e.y, tx - e.x);
       const melee = type === 2 || type === 9;
       const travel = melee ? 0.05 : type === 0 ? 0.08 : 0.18;
       ctx.save(); ctx.globalCompositeOperation = 'screen';
       if (!melee && age < travel) {
         const t = age / travel;
-        const px = e.x + (e.tx - e.x) * t, py = e.y - 24 + (e.ty - e.y + 24) * t;
+        const px = e.x + (tx - e.x) * t, py = e.y - 24 + (ty - e.y + 24) * t;
         ctx.translate(px, py); ctx.rotate(angle);
         const w = type === 1 ? 42 : type === 0 ? 30 : 28;
         ctx.globalAlpha = 0.9; ctx.drawImage(this.art.effects[type], -w / 2, -w / 2, w, w);
@@ -218,7 +247,7 @@ export class ArenaRenderer {
         const t = Math.min(1, (age - travel) / 0.5);
         const size = (type === 0 || type === 1 ? 37 : type === 8 ? 92 : 74) * (0.55 + Math.sin(t * Math.PI * 0.65) * 0.75);
         ctx.globalAlpha = (1 - t) * 0.95;
-        ctx.translate(e.tx, e.ty);
+        ctx.translate(tx, ty);
         if (melee) ctx.rotate(angle + t * 0.8);
         if (type === 6) ctx.rotate(t * 2);
         ctx.drawImage(this.art.effects[type], -size / 2, -size / 2, size, size);
@@ -227,8 +256,8 @@ export class ArenaRenderer {
       if (e.amount > 0 && age >= travel) {
         ctx.save(); ctx.globalAlpha = Math.max(0, 1 - (age - travel) / 0.55);
         ctx.font = 'bold 12px monospace'; ctx.textAlign = 'center'; ctx.strokeStyle = '#07110a'; ctx.lineWidth = 3;
-        const y = e.ty - 23 - (age - travel) * 30;
-        ctx.strokeText(e.amount, e.tx, y); ctx.fillStyle = elementColors[type]; ctx.fillText(e.amount, e.tx, y); ctx.restore();
+        const y = ty - 23 - (age - travel) * 30;
+        ctx.strokeText(e.amount, tx, y); ctx.fillStyle = elementColors[type]; ctx.fillText(e.amount, tx, y); ctx.restore();
       }
     }
   }
