@@ -20,7 +20,7 @@ export function installBattleTools(game) {
       <div class="combat-clock"><span class="eyebrow">NEXT WAVE</span><strong id="wave-clock">준비 중</strong></div>
       <div class="wave-progress"><div id="wave-fill"></div></div>
       <span id="round-rule" class="muted"></span>
-      ${game.mode === 'single' ? '<button id="pause-game" class="mini-btn">Ⅱ 일시정지</button><div class="segments speed-buttons"><button data-speed="1">1×</button><button data-speed="2">2×</button><button data-speed="3">3×</button></div>' : ''}
+      ${game.mode === 'single' ? '<button id="pause-game" class="mini-btn">Ⅱ 일시정지</button><span class="muted">기본 2× 속도</span>' : ''}
       <button id="formation" class="mini-btn">⌗ 자동 배치</button>
     </div>
     <div id="connection-warning" class="connection-warning" hidden>연결을 복구하고 있습니다. 서버의 전투는 계속 진행됩니다.</div>
@@ -55,10 +55,6 @@ export function updateCombat(game, room, user, selected, selectedItem, boardInde
   if ($('#pause-game')) {
     text('#pause-game', game.status === 'paused' ? '▶ 전투 재개' : 'Ⅱ 일시정지');
     $('#pause-game').disabled = !connected || !['playing', 'paused'].includes(game.status);
-    document.querySelectorAll('[data-speed]').forEach(button => {
-      button.classList.toggle('selected', Number(button.dataset.speed) === game.speed);
-      button.disabled = !editable;
-    });
   }
   $('#formation').disabled = !editable || !p.champions.length;
   const overlay = $('#arena-state');
