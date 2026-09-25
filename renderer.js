@@ -116,8 +116,9 @@ export class ArenaRenderer {
       ctx.fillStyle = '#060e0aaa'; ctx.beginPath(); ctx.ellipse(c.x, c.y + 14, 24, 9, 0, 0, Math.PI * 2); ctx.fill();
       ctx.strokeStyle = COLORS[c.tier] + 'a0'; ctx.lineWidth = c.id === selected ? 2 : 1;
       ctx.beginPath(); ctx.ellipse(c.x, c.y + 12, 25, 9, 0, 0, Math.PI * 2); ctx.stroke();
-      if (this.art.ready) this.drawCharacterSprite(ctx, c, type);
-      else this.drawChampion(ctx, c.x, c.y, type, color);
+      const ally = game.mode === 'coop' && owner !== game.players[0];
+      if (this.art.ready) this.drawCharacterSprite(ctx, c, type, ally);
+      else { ctx.save(); if (ally) ctx.filter = 'grayscale(1) brightness(.72)'; this.drawChampion(ctx, c.x, c.y, type, ally ? '#8b9290' : color); ctx.restore(); }
       if (c.tier >= 4) {
         ctx.strokeStyle = COLORS[c.tier] + '66'; ctx.lineWidth = 1;
         ctx.beginPath(); ctx.arc(c.x, c.y, 24 + Math.sin(seconds * 3) * 2, 0, Math.PI * 2); ctx.stroke();
@@ -168,7 +169,7 @@ export class ArenaRenderer {
     ctx.fillText(`${board.monsters.length} HOSTILES / ${board.spawn.length} INCOMING`, 400, 27);
     ctx.textAlign = 'left';
   }
-  drawCharacterSprite(ctx, c, type) {
+  drawCharacterSprite(ctx, c, type, ally = false) {
     const attack = this.attacks.get(c.id);
     const age = attack ? this.clock - attack.start : 10;
     const phase = Math.max(0, 1 - age / 0.38);
@@ -185,7 +186,7 @@ export class ArenaRenderer {
     }
     ctx.save(); ctx.translate(c.x + dx, c.y + dy + bob); ctx.rotate(rotation); ctx.scale(facing, 1);
     const tint = Math.floor(c.base / 10) * 3;
-    ctx.filter = `hue-rotate(${tint}deg) saturate(${1 + c.tier * 0.045})`;
+    ctx.filter = ally ? 'grayscale(1) brightness(.72)' : `hue-rotate(${tint}deg) saturate(${1 + c.tier * 0.045})`;
     ctx.drawImage(this.art.characters[type], -34, -78, 68, 100);
     ctx.filter = 'none'; ctx.restore();
     if (phase > 0 && type >= 3 && type <= 7) {
