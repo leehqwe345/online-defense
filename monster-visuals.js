@@ -1,7 +1,8 @@
+import {monsterDefinition,traitDefinition} from './monsters.js';
 import { position } from './engine.js';
-import { monsterSpriteIndex } from './art.js';
+import { monsterSpriteIndex, monsterName } from './art.js';
 
-export const reactionDelay = type => type === 'poison' ? 0 : [2, 9].includes(type) ? 0.05 : type === 0 ? 0.08 : 0.18;
+export const reactionDelay = type => type === 'poison' ? 0 : [2, 9, 11, 12].includes(type) ? 0.05 : type === 0 ? 0.08 : 0.18;
 const colors = ['#92ad79', '#ad9b7b', '#b18771', '#73acbd', '#cc8862', '#a19a74', '#9c8db2', '#ae7ea0', '#78a995', '#b3a67e'];
 const keyFor = (board, id) => `${board}:${id}`;
 
@@ -36,12 +37,13 @@ export class MonsterVisuals {
   prune(clock) {
     for (const [key, event] of this.deaths) if (clock - event.start >= event.duration) this.deaths.delete(key);
   }
-  sprite(ctx, monster, width, flash = 0) {
-    const index = monsterSpriteIndex(monster), tile = this.art.monsters[index];
+  sprite(ctx, monster, width, flash = 0, walkFrame = null) {
+    ctx.save(); ctx.scale(1, 1 / (this.verticalScale || 1));
+    const index = monsterSpriteIndex(monster), tile = walkFrame||this.art.monsters[index];
     if (tile) {
-      const height = width * tile.height / tile.width;
-      ctx.drawImage(tile, -width / 2, -height * 0.68, width, height);
-      if (flash > 0) {
+      const height = walkFrame?.bodyHeight?width*.8*tile.height/tile.bodyHeight:width * tile.height / tile.width;const drawWidth=height*tile.width/tile.height;
+      ctx.drawImage(tile, -drawWidth / 2, walkFrame?-height*tile.anchorY+12:-height*.68, drawWidth, height);
+      if (flash > 0 && !walkFrame) {
         const alpha = ctx.globalAlpha; ctx.globalAlpha *= flash;
         ctx.drawImage(this.art.monsterFlashes[index], -width / 2, -height * 0.68, width, height); ctx.globalAlpha = alpha;
       }
@@ -49,6 +51,7 @@ export class MonsterVisuals {
       ctx.fillStyle = colors[monster.family] || colors[0];
       ctx.beginPath(); ctx.arc(0, -5, width * 0.23, 0, Math.PI * 2); ctx.fill();
     }
+    ctx.restore();
   }
   reaction(ctx, row, progress, x, y, size, alpha = 1) {
     if (progress < 0 || progress >= 1) return;
@@ -63,7 +66,7 @@ export class MonsterVisuals {
     const progress = age >= 0 && age < 0.3 ? age / 0.3 : 1;
     const pulse = Math.sin(progress * Math.PI) * (1 - progress);
     const moving = !(monster.stun > 0), phase = clock * (monster.slow > 0 ? 5 : 10) + monster.id;
-    const floating = [3, 6, 7, 8].includes(monster.family);
+    const floating = monsterDefinition(monster).floating;
     const bob = moving ? Math.sin(phase) * (floating ? 2.2 : 1.1) : 0;
     const dx = (hit?.dx || 0) * pulse * (monster.boss ? 5 : 10), dy = (hit?.dy || 0) * pulse * 5;
     ctx.save(); ctx.translate(x, y);
@@ -74,15 +77,17 @@ export class MonsterVisuals {
     const squash = moving && [0, 9].includes(monster.family) ? Math.sin(phase) * 0.035 : 0;
     ctx.scale(1 + squash + pulse * 0.16, 1 - squash - pulse * 0.18);
     if (monster.slow > 0) ctx.filter = 'saturate(.65) brightness(1.12)';
-    this.sprite(ctx, monster, width, age >= 0 && age < 0.12 ? (1 - age / 0.12) * 0.9 : 0);
+    const frames=this.art.monsterWalks?.[monsterSpriteIndex(monster)];const walkFrame=frames?.[moving?Math.floor(monster.p*300+monster.id)%4:0];this.sprite(ctx, monster, width, age >= 0 && age < 0.12 ? (1 - age / 0.12) * 0.9 : 0,walkFrame);
     ctx.restore();
     if (age >= 0 && age < 0.3 && hit?.type !== 'poison') this.reaction(ctx, 0, age / 0.3, dx, dy - 8, width * 0.75, 0.8);
     if (hit?.type === 'poison' && age >= 0 && age < 0.3) { ctx.strokeStyle = `rgba(171,223,97,${1 - age / 0.3})`; ctx.beginPath(); ctx.ellipse(0, 8, width * 0.28, width * 0.1, 0, 0, Math.PI * 2); ctx.stroke(); }
-    const barY = monster.boss ? -53 : -36;
+    const barY = (monster.boss ? -53 : -36) / (this.verticalScale || 1);
     ctx.fillStyle = '#08120e'; ctx.fillRect(-halfBar - 1, barY - 1, halfBar * 2 + 2, 6);
     ctx.fillStyle = monster.boss ? '#ffcd78' : '#b9e388'; ctx.fillRect(-halfBar, barY, halfBar * 2 * Math.max(0, Math.min(1, monster.hp / monster.maxHp)), 4);
     ctx.textAlign = 'center';
-    if (monster.boss) { ctx.fillStyle = '#ffdc94'; ctx.font = 'bold 9px sans-serif'; ctx.fillText('BOSS', 0, barY - 5); }
+    ctx.save();ctx.scale(1,1/(this.verticalScale||1));ctx.font='bold 10px sans-serif';const name=monsterName(monster),ly=23;ctx.fillStyle='#07101de6';const lw=ctx.measureText(name).width+8;this.labelBounds??=[];const rect={x:x-lw/2,y:y*(this.verticalScale||1)+ly-10,w:lw,h:14};const showName=selected||monster.boss||!this.labelBounds.some(r=>r.x<rect.x+rect.w&&r.x+r.w>rect.x&&r.y<rect.y+rect.h&&r.y+r.h>rect.y);if(showName){this.labelBounds.push(rect);ctx.fillRect(-lw/2,ly-10,lw,14);ctx.strokeStyle='#050914';ctx.lineWidth=3;ctx.strokeText(name,0,ly);ctx.fillStyle=monster.boss?'#ffd47d':'#f0f4ff';ctx.fillText(name,0,ly);}ctx.restore();
+    if (selected&&!monster.boss&&monsterDefinition(monster).trait!=='none') {ctx.fillStyle=traitDefinition(monster).color;ctx.font='bold 8px sans-serif';ctx.fillText(traitDefinition(monster).name,0,barY-5);}
+    if(monster.shield>0||monster.phaseGuard){ctx.strokeStyle=monster.phaseGuard?'#d8a4ffaa':'#77c6ffaa';ctx.lineWidth=2;ctx.beginPath();ctx.ellipse(0,-8,width*.42,width*.47,0,0,Math.PI*2);ctx.stroke();}
     if (monster.stun > 0) { ctx.fillStyle = '#c8efff'; ctx.font = '15px sans-serif'; ctx.fillText('✧', halfBar + 7, barY + 4); }
     ctx.restore();
   }
@@ -91,7 +96,7 @@ export class MonsterVisuals {
     for (const monster of this.deaths.values()) {
       if (monster.board !== board) continue;
       const age = clock - monster.start, t = Math.max(0, age / monster.duration);
-      const { x, y } = position(monster.p), width = monster.boss ? 96 : 62;
+      const { x, y } = position(monster.p,monster), width = monster.boss ? 96 : 62;
       const fall = Math.min(1, t / 0.6), direction = monster.p >= 0.5 ? -1 : 1;
       ctx.save(); ctx.translate(x + (monster.hurt?.dx || 0) * fall * 9, y + fall * 12);
       ctx.globalAlpha = Math.max(0, 1 - t * 1.8);

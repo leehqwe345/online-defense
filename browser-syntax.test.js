@@ -1,0 +1,2 @@
+import test from 'node:test';import {execFileSync} from 'node:child_process';
+test('browser entry points and modules parse successfully',()=>{for(const file of ['lobby.js','app.js','battle-ui.js','renderer.js','art.js','maps.js','monster-visuals.js','command-ui.js','boss-skills.js','champion-skills.js','champion-skill-visuals.js','talents.js','battle-announcements.js'])execFileSync(process.execPath,['--check',file],{stdio:'pipe'});});

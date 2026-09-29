@@ -1,0 +1,7 @@
+# Boss spell imagery
+
+Built-in image_gen, 2026-09-28. Output: assets/boss-skills-v1.png.
+Five columns: fear, attack speed curse, healing, haste, shield. First row HUD icons; second row cast effects. Canvas effects use screen blending to preserve luminous edges.
+
+## Generation prompt
+Fantasy tower defense game VFX sprite atlas, exactly 5 columns by 2 rows, landscape 1536x1024. All ten cells equal size, centers precisely aligned. True transparent background, no text, no letters, no borders, no scenery. Keep generous transparent gutters, all glows within each cell. Columns define five boss spells left to right: 1 purple screaming spectral skull (fear), 2 blue broken hourglass with chains (attack speed curse), 3 emerald healing cross and leaves (monster regeneration), 4 red blazing claw and forward chevrons (monster haste), 5 gold magical shield crest (monster protection). TOP ROW: five richly painted clear compact HUD ability icons with these symbols, no square backplates. BOTTOM ROW: five distinct large circular magical burst effects featuring the matching same symbol, transparent centers, ethereal wisps radiating in rings; purple fear shockwave, icy blue chain curse ring, green healing bloom ring, red haste flame ring, golden shield dome ring. Polished hand-painted fantasy game art, luminous edges, readable at small scale. No objects cross their cell boundaries. Exactly ten separate isolated images.

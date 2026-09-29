@@ -58,7 +58,7 @@ test('versus does not spawn from timer, and 100 is the last wave', () => {
   assert.equal(final.status, 'playing');
 });
 
-test('pause freezes combat and countdown; 3x uses simulation substeps', () => {
+test('pause freezes combat and countdown; fixed 2x uses simulation substeps', () => {
   const game = single();
   action(game, 'a', { type: 'start' });
   action(game, 'a', { type: 'pause' });
@@ -68,10 +68,10 @@ test('pause freezes combat and countdown; 3x uses simulation substeps', () => {
   action(game, 'a', { type: 'speed', value: 3 });
   action(game, 'a', { type: 'pause' });
   stepGame(game, 1, tick);
-  assert.ok(Math.abs(game.time - 3) < 1e-8);
+  assert.ok(Math.abs(game.time - 2) < 1e-8);
   const coop = createGame(users, { mode: 'coop' });
   assert.match(action(coop, 'a', { type: 'pause' }), /온라인/);
-  assert.match(action(coop, 'a', { type: 'speed', value: 3 }), /싱글/);
+  assert.match(action(coop, 'a', { type: 'speed', value: 3 }), /고정/);
 });
 
 test('auto formation stays inside map and affects only requesting player', () => {

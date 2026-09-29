@@ -29,21 +29,21 @@ test('a lethal hit preserves its target and death pose once, without delaying re
   tick(game, 1.6); assert.equal(game.deaths.length, 0);
 });
 
-test('damage immunity has no hurt reaction; actual damage records one', () => {
+test('resisted damage still produces a hurt reaction', () => {
   const game = fixture(), m = game.boards[0].monsters[0], c = hero(game);
   m.hp = m.maxHp = 1000;
   m.defenses = ['물리면역']; tick(game, 0.05);
-  assert.equal(m.hp, 1000); assert.equal(m.hurt, undefined);
+  assert.ok(m.hp < 1000); assert.equal(m.hurt.type, 0);
   m.defenses = []; c.cd = 0; tick(game, 0.05);
   assert.ok(m.hp < 1000); assert.equal(m.hurt.type, 0);
 });
 
-test('poison deaths and co-op boss deaths retain visuals with correct shared rewards', () => {
+test('poison deaths and co-op boss deaths retain visuals with correct individual rewards', () => {
   const game = fixture('coop'), m = game.boards[0].monsters[0];
   m.hp = 1; m.poison = 100; m.poisonOwner = 'b'; m.boss = true;
   tick(game, 0.05);
   assert.equal(game.deaths.length, 1); assert.equal(game.deaths[0].hurt.type, 'poison');
-  assert.equal(game.deaths[0].boss, true); assert.deepEqual(game.players.map(p => p.gold), [90, 90]);
+  assert.equal(game.deaths[0].boss, true); assert.deepEqual(game.players.map(p => p.gold), [60, 90]);
   assert.deepEqual(game.players.map(p => p.kills), [0, 1]);
 });
 

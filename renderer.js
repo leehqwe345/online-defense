@@ -1,47 +1,18 @@
-import { CHAMPIONS, COLORS, stats, position } from './engine.js';
+import {ChampionSkillVisuals} from './champion-skill-visuals.js';
+import {BossSkillVisuals} from './boss-skills.js';
+import {MONSTERS,traitDefinition} from './monsters.js';
+import { boardOwners, CHAMPIONS, COLORS, stats, position } from './engine.js';
 import { ArtAssets, MONSTER_NAMES, monsterName } from './art.js';
 import { MonsterVisuals } from './monster-visuals.js';
+import { MapArt, MAPS } from './maps.js';
 
-const elementColors = ['#edcb87', '#b9dc89', '#e3b09b', '#78d2ed', '#ffad6c', '#ceb992', '#88debd', '#acd76f', '#ecba79', '#c8a5f2'];
-
-// An isolated animation viewer. It never sends gameplay actions or changes a room.
-export function openAnimationPreview(base, tier = 0) {
-  if (!CHAMPIONS[base]) return;
-  document.querySelector('#animation-preview')?.close();
-  const dialog = document.createElement('dialog'); dialog.id = 'animation-preview';
-  dialog.innerHTML = `<span class="eyebrow">CHARACTER SHOWCASE</span><h2>${CHAMPIONS[base].name}</h2><p>캐릭터 공격 모션과 생성 이펙트 미리보기</p><canvas width="700" height="440" aria-label="캐릭터 공격 애니메이션"></canvas><div class="preview-legend"><span>조준 · 공격 · 명중</span><button class="mini-btn" id="preview-close">닫기 ×</button></div>`;
-  document.body.append(dialog); dialog.showModal();
-  const renderer = new ArenaRenderer();
-  const scene = document.createElement('canvas'); scene.width = scene.height = 800;
-  const canvas = dialog.querySelector('canvas'), ctx = canvas.getContext('2d');
-  let frameId, last = performance.now(), time = 0, nextShot = 0;
-  dialog.querySelector('#preview-close').onclick = () => dialog.close();
-  dialog.addEventListener('close', () => { cancelAnimationFrame(frameId); dialog.remove(); }, { once: true });
-  const loop = now => {
-    if (!dialog.open) return;
-    time += Math.min(0.05, (now - last) / 1000); last = now;
-    const champion = { id: 1, base, tier, x: 400, y: 180, equipment: {}, growth: 0 };
-    const target = { id: 2, p: 0.15, hp: 1000, maxHp: 1000, family: 2, defenses: [], slow: 0, stun: 0 };
-    const game = { time, status: 'playing', mode: 'single', mapScale: 1, players: [{ name: '미리보기', champions: [champion] }], boards: [{ monsters: [target], spawn: [] }], effects: [] };
-    if (time >= nextShot && renderer.art.ready) {
-      nextShot = time + Math.max(0.55, 1 / stats(champion).speed);
-      const point = position(target.p);
-      target.hurt = { born: time, type: CHAMPIONS[base].type, dx: 0, dy: -1 };
-      game.effects = [{ source: 1, x: champion.x, y: champion.y, tx: point.x, ty: point.y, born: time, until: time + 0.3, amount: Math.round(stats(champion).attack), type: CHAMPIONS[base].type, board: 0 }];
-    }
-    renderer.receive(game); renderer.draw(scene, 0, 1, 2);
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.drawImage(scene, 245, 10, 350, 220, 0, 0, canvas.width, canvas.height);
-    frameId = requestAnimationFrame(loop);
-  };
-  frameId = requestAnimationFrame(loop);
-}
+const elementColors = ['#edcb87', '#b9dc89', '#e3b09b', '#78d2ed', '#ffad6c', '#ceb992', '#88debd', '#acd76f', '#ecba79', '#c8a5f2','#7ce9ff','#d2a0ff','#ffbe79','#71edec','#e5c282'];
 
 export function openMonsterPreview() {
   document.querySelector('#monster-preview')?.close();
   const dialog = document.createElement('dialog'); dialog.id = 'monster-preview';
   dialog.setAttribute('aria-label', '몬스터 피격·사망 미리보기');
-  dialog.innerHTML = `<span class="eyebrow">BESTIARY / REACTION STUDY</span><h2>몬스터 피격 · 사망</h2><p>실제 전투와 같은 이미지·연출로 재생합니다.</p><label for="preview-monster">몬스터 종류</label><select id="preview-monster">${MONSTER_NAMES.map((name, i) => `<option value="${i}">${i >= 10 ? '보스 · ' : ''}${name}</option>`).join('')}</select><canvas width="700" height="400" aria-label="몬스터 반응 애니메이션"></canvas><div class="preview-legend"><span id="monster-preview-state" role="status">이미지 불러오는 중</span><div><button class="mini-btn" data-reaction="hit">피격 재생</button><button class="mini-btn" data-reaction="death">사망 재생</button><button class="mini-btn" id="monster-preview-close">닫기 ×</button></div></div>`;
+  dialog.innerHTML = `<span class="eyebrow">BESTIARY / REACTION STUDY</span><h2>몬스터 피격 · 사망</h2><p>실제 전투와 같은 이미지·연출로 재생합니다.</p><label for="preview-monster">몬스터 종류</label><select id="preview-monster">${MONSTER_NAMES.map((name, i) => `<option value="${i}">${[10,11].includes(i) ? '보스 · ' : ''}${name}</option>`).join('')}</select><canvas width="700" height="400" aria-label="몬스터 반응 애니메이션"></canvas><div class="preview-legend"><span id="monster-preview-state" role="status">이미지 불러오는 중</span><div><button class="mini-btn" data-reaction="hit">피격 재생</button><button class="mini-btn" data-reaction="death">사망 재생</button><button class="mini-btn" id="monster-preview-close">닫기 ×</button></div></div>`;
   document.body.append(dialog); dialog.showModal();
   const renderer = new ArenaRenderer(), scene = document.createElement('canvas'); scene.width = scene.height = 800;
   const canvas = dialog.querySelector('canvas'), ctx = canvas.getContext('2d');
@@ -57,8 +28,8 @@ export function openMonsterPreview() {
     const dt = Math.min(0.05, (now - last) / 1000); last = now; time += dt;
     if (renderer.art.monstersReady) phase += dt;
     if (phase > 5) reset();
-    const index = Number(dialog.querySelector('select').value), boss = index >= 10;
-    const monster = { id, family: index % 10, round: index === 11 ? 20 : 10, boss, p: 0.125, hp: 100, maxHp: 100, slow: 0, stun: 0 };
+    const index = Number(dialog.querySelector('select').value), boss = [10,11].includes(index);
+    const monster = { id, family: index>=12?index-2:index%10, round: index === 11 ? 20 : 10, boss, p: 0.125, hp: 100, maxHp: 100, slow: 0, stun: 0 };
     if (renderer.art.monstersReady && ((!hitDone && phase >= 1) || requested === 'hit')) { hurt = { born: time, type: 2, dx: 1, dy: 0 }; hitDone = true; }
     if (renderer.art.monstersReady && ((!deathDone && phase >= 2.8) || requested === 'death')) {
       hurt = { born: time, type: 2, dx: 1, dy: 0 }; dead = deathDone = true;
@@ -69,21 +40,42 @@ export function openMonsterPreview() {
     const game = { time, status: 'playing', mode: 'single', mapScale: 1, players: [], boards: [{ monsters: dead ? [] : [monster], spawn: [] }], effects: [], deaths: deaths.filter(e => e.until > time) };
     renderer.receive(game); renderer.draw(scene, 0, null, null);
     ctx.clearRect(0, 0, canvas.width, canvas.height); ctx.drawImage(scene, 230, 0, 340, 194, 0, 0, canvas.width, canvas.height);
-    dialog.querySelector('#monster-preview-state').textContent = `${monsterName(monster)} · ${!renderer.art.monstersReady ? '불러오는 중' : dead ? '붕괴 → 영혼 소멸' : hitDone ? '피격 → 복귀' : '대기'}`;
+    dialog.querySelector('#monster-preview-state').textContent = `${monsterName(monster)} · ${boss?'보스':traitDefinition(monster).name+' — '+traitDefinition(monster).description} · ${!renderer.art.monstersReady ? '불러오는 중' : dead ? '붕괴 → 영혼 소멸' : hitDone ? '피격 → 복귀' : '대기'}`;
     frameId = requestAnimationFrame(loop);
   };
   frameId = requestAnimationFrame(loop);
 }
 
+export function openMapPreview() {
+  document.querySelector('#map-preview')?.close();
+  const dialog = document.createElement('dialog'); dialog.id = 'map-preview';
+  dialog.setAttribute('aria-label', '단계별 전장 지도');
+  dialog.innerHTML = `<span class="eyebrow">TEN SECTORS / ONE HUNDRED WAVES</span><h2>단계별 전장 지도</h2><p>10라운드마다 다음 지역으로 이동합니다. 네모 경로와 배치 위치는 유지됩니다.</p><label for="map-preview-stage">전장 선택</label><select id="map-preview-stage">${MAPS.map(m => `<option value="${m.first}">${m.first}–${m.last} · ${m.name}</option>`).join('')}</select><canvas width="800" height="800" aria-label="단계별 전장 미리보기"></canvas><button class="mini-btn" id="map-preview-close">닫기 ×</button>`;
+  document.body.append(dialog); dialog.showModal();
+  const renderer = new ArenaRenderer(), canvas = dialog.querySelector('canvas'); let frame;
+  dialog.querySelector('#map-preview-close').onclick = () => dialog.close();
+  dialog.addEventListener('close', () => { cancelAnimationFrame(frame); dialog.remove(); }, { once: true });
+  const loop = () => {
+    if (!dialog.open) return;
+    renderer.receive({ round: Number(dialog.querySelector('select').value), time: 0, status: 'ready', mode: 'single', mapScale: 1, players: [], boards: [{ monsters: [], spawn: [] }], effects: [] });
+    renderer.draw(canvas, 0); frame = requestAnimationFrame(loop);
+  };
+  loop();
+}
+
 export class ArenaRenderer {
   constructor() {
     this.previous = null; this.current = null; this.received = 0; this.positions = new Map();
+    this.walkStates = new Map();
     this.art = new ArtAssets(); this.attacks = new Map(); this.seen = new Map(); this.visualEffects = [];
     this.monsterVisuals = new MonsterVisuals(this.art);
+    this.mapArt = new MapArt(); this.bossVisuals = new BossSkillVisuals(); this.championSkillVisuals = new ChampionSkillVisuals();
     this.clock = 0; this.lastFrame = performance.now();
   }
   receive(game) {
-    if (!this.current) { this.attacks.clear(); this.seen.clear(); this.visualEffects = []; this.monsterVisuals.reset(); }
+    if (!this.current || game.time < this.current.time) { this.walkStates.clear(); this.attacks.clear(); this.seen.clear(); this.visualEffects = []; this.monsterVisuals.reset(); }
+    const aliveHeroes=new Set(game.players.flatMap(p=>p.champions.map(c=>c.id)));
+    for(const id of this.walkStates.keys())if(!aliveHeroes.has(id))this.walkStates.delete(id);
     this.previous = this.current;
     this.current = game;
     this.received = performance.now();
@@ -105,6 +97,11 @@ export class ArenaRenderer {
     const game = this.current;
     if (!game || !canvas || !game.boards[boardIndex]) return;
     const ctx = canvas.getContext('2d');
+    const ratio=canvas.clientWidth&&canvas.clientHeight?canvas.clientHeight/canvas.clientWidth:430/800,pixelRatio=Math.min(2,globalThis.devicePixelRatio||1),width=Math.round((canvas.clientWidth||800)*pixelRatio),height=Math.round(width*ratio);
+    if(canvas.width!==width||canvas.height!==height){canvas.width=width;canvas.height=height;}
+    this.verticalScale = ratio;const density=width/800;ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';
+    this.monsterVisuals.verticalScale = this.verticalScale;
+    ctx.setTransform(density, 0, 0, density*this.verticalScale, 0, 0);
     const now = performance.now();
     if (game.status !== 'paused') this.clock += Math.min(0.05, (now - this.lastFrame) / 1000);
     this.lastFrame = now;
@@ -113,31 +110,24 @@ export class ArenaRenderer {
     const previousMonsters = new Map(previousBoard?.monsters.map(m => [m.id, m]) || []);
     const previousHeroes = new Map(this.previous?.players.flatMap(p => p.champions).map(c => [c.id, c]) || []);
     const board = game.boards[boardIndex];
-    this.positions.clear();
+    this.positions.clear();this.monsterVisuals.labelBounds=[];
     const seconds = game.time;
     ctx.clearRect(0, 0, 800, 800);
     const bg = ctx.createRadialGradient(400, 350, 80, 400, 400, 560);
     bg.addColorStop(0, '#1c3028'); bg.addColorStop(1, '#101c1b');
     ctx.fillStyle = bg; ctx.fillRect(0, 0, 800, 800);
-    ctx.lineWidth = 1; ctx.strokeStyle = '#688d5720';
-    for (let i = 16; i < 800; i += 32) {
-      ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, 800); ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(800, i); ctx.stroke();
+    const theme = this.mapArt.draw(ctx, game.round || 1, this.clock);
+    if(board.world){ctx.fillStyle='#18112bbf';ctx.fillRect(0,0,800,800);ctx.strokeStyle='#b793fa';ctx.lineWidth=3;ctx.beginPath();ctx.ellipse(400,400,270,280,0,0,Math.PI*2);ctx.stroke();ctx.save();ctx.translate(400,570);ctx.scale(1,1/this.verticalScale);ctx.textAlign='center';ctx.font='bold 24px sans-serif';ctx.fillStyle='#ead1ff';ctx.fillText('WORLD BOSS',0,0);ctx.font='14px sans-serif';const boss=board.monsters[0];ctx.fillText(boss?'HP '+Math.ceil(boss.hp).toLocaleString()+' / '+Math.ceil(boss.maxHp).toLocaleString()+' · '+Math.ceil(Math.max(0,board.deadline-game.time))+'초':'5라운드마다 출현 · 챔피언을 파견하세요',0,28);ctx.restore();}else this.mapArt.drawRoad(ctx, theme);
+    ctx.textAlign = 'center';
+    for (const m of board.monsters) {
+      const old = previousMonsters.get(m.id) || m;
+      const progress = old.p + ((m.p - old.p + 1) % 1) * blend;
+      const { x, y } = position(progress,m);
+      this.positions.set(m.id, { x, y: y - 8 });
+      this.monsterVisuals.drawMonster(ctx, m, boardIndex, x, y, this.clock, m.id === selectedEnemy);
     }
-    ctx.lineJoin = 'round'; ctx.lineWidth = 68; ctx.strokeStyle = '#0b1413'; ctx.strokeRect(80, 80, 640, 640);
-    ctx.lineWidth = 59; ctx.strokeStyle = '#334137'; ctx.strokeRect(80, 80, 640, 640);
-    ctx.lineWidth = 1; ctx.strokeStyle = '#80976666'; ctx.strokeRect(44, 44, 712, 712); ctx.strokeRect(116, 116, 568, 568);
-    ctx.strokeStyle = '#a1b87945'; ctx.setLineDash([7, 19]); ctx.lineDashOffset = -seconds * 10;
-    ctx.strokeRect(80, 80, 640, 640); ctx.setLineDash([]); ctx.lineDashOffset = 0;
-    for (const [x, y] of [[44, 44], [744, 44], [744, 744], [44, 744]]) {
-      ctx.fillStyle = '#b1ca8c'; ctx.fillRect(x, y, 12, 12);
-      ctx.strokeStyle = '#b1ca8c40'; ctx.strokeRect(x - 5, y - 5, 22, 22);
-    }
-    ctx.textAlign = 'center'; ctx.fillStyle = '#b9d594'; ctx.font = '20px sans-serif';
-    ctx.fillText('→', 400, 87); ctx.fillText('↓', 720, 407); ctx.fillText('←', 400, 727); ctx.fillText('↑', 80, 407);
-    ctx.fillStyle = '#89b27613'; ctx.font = 'bold 75px sans-serif'; ctx.fillText('LOOP', 400, 402);
-    ctx.fillStyle = '#97ba7d3d'; ctx.font = '11px monospace'; ctx.fillText('DEFENSE PROTOCOL / SECTOR 01', 400, 432);
-    const owners = game.mode === 'versus' ? [game.players[boardIndex]] : game.players;
+    this.monsterVisuals.drawDeaths(ctx, boardIndex, this.clock);
+    const owners = boardOwners(game,boardIndex);
     for (const owner of owners) for (const original of owner.champions) {
       const old = previousHeroes.get(original.id) || original;
       const c = { ...original, x: old.x + (original.x - old.x) * blend, y: old.y + (original.y - old.y) * blend };
@@ -157,7 +147,7 @@ export class ArenaRenderer {
       ctx.fillStyle = '#060e0aaa'; ctx.beginPath(); ctx.ellipse(c.x, c.y + 14, 24, 9, 0, 0, Math.PI * 2); ctx.fill();
       ctx.strokeStyle = COLORS[c.tier] + 'a0'; ctx.lineWidth = (c.id === selected || selectedIds.includes(c.id)) ? 2 : 1;
       ctx.beginPath(); ctx.ellipse(c.x, c.y + 12, 25, 9, 0, 0, Math.PI * 2); ctx.stroke();
-      const ally = game.mode === 'coop' && owner !== game.players[0];
+      const ally = false;
       if (this.art.ready) this.drawCharacterSprite(ctx, c, type, ally);
       else { ctx.save(); if (ally) ctx.filter = 'grayscale(1) brightness(.72)'; this.drawChampion(ctx, c.x, c.y, type, ally ? '#8b9290' : color); ctx.restore(); }
       if (c.tier >= 4) {
@@ -166,23 +156,16 @@ export class ArenaRenderer {
       }
       ctx.fillStyle = COLORS[c.tier];
       for (let i = 0; i <= c.tier; i++) ctx.fillRect(c.x - c.tier * 3 + i * 6 - 1.5, c.y + 26, 3, 3);
-      if (c.id === selected || selectedIds.includes(c.id)) {
-        ctx.font = '10px sans-serif'; ctx.fillStyle = '#d2e2cb'; ctx.fillText(CHAMPIONS[c.base].name, c.x, c.y + 43);
-        if (game.mode === 'coop') { ctx.font = '9px sans-serif'; ctx.fillStyle = '#9bac99'; ctx.fillText(owner.name, c.x, c.y + 55); }
+      {
+        ctx.save();ctx.translate(c.x,c.y+32);ctx.scale(1,1/this.verticalScale);ctx.font='bold 11px sans-serif';const name=CHAMPIONS[c.base].name;const labelWidth=ctx.measureText(name).width+10;ctx.fillStyle='#03101ee8';ctx.fillRect(-labelWidth/2,-12,labelWidth,16);ctx.strokeStyle='#00101b';ctx.lineWidth=3;ctx.strokeText(name,0,0);ctx.fillStyle='#f5f7ff';ctx.fillText(name,0,0);ctx.restore();
+        const buffs=Object.entries(c.supportBuffs||{}).filter(([,b])=>b.until>game.time);if(buffs.length){ctx.save();ctx.strokeStyle='#ffe48b';ctx.lineWidth=3;ctx.beginPath();ctx.ellipse(c.x,c.y+12,26,11,0,0,Math.PI*2);ctx.stroke();ctx.translate(c.x,c.y-65);ctx.scale(1,1/this.verticalScale);ctx.font='bold 11px sans-serif';ctx.fillStyle='#ffe48b';ctx.strokeStyle='#12101d';ctx.lineWidth=4;const label=buffs.map(([k,b])=>(k==='damage'?'✦ 피해':'✦ 공속')+' +'+Math.round(b.amount*100)+'% '+Math.ceil(b.until-game.time)+'s').join(' / ');ctx.strokeText(label,0,0);ctx.fillText(label,0,0);ctx.restore();}
       }
+
     }
     if (dragStart && dragNow) {
       const x=Math.min(dragStart.x,dragNow.x), y=Math.min(dragStart.y,dragNow.y), w=Math.abs(dragNow.x-dragStart.x), h=Math.abs(dragNow.y-dragStart.y);
       ctx.save(); ctx.fillStyle='#b9f66d18'; ctx.strokeStyle='#d4fba1'; ctx.lineWidth=2; ctx.setLineDash([8,5]); ctx.fillRect(x,y,w,h); ctx.strokeRect(x,y,w,h); ctx.setLineDash([]); ctx.restore();
     }
-    for (const m of board.monsters) {
-      const old = previousMonsters.get(m.id) || m;
-      const progress = old.p + ((m.p - old.p + 1) % 1) * blend;
-      const { x, y } = position(progress);
-      this.positions.set(m.id, { x, y: y - 8 });
-      this.monsterVisuals.drawMonster(ctx, m, boardIndex, x, y, this.clock, m.id === selectedEnemy);
-    }
-    this.monsterVisuals.drawDeaths(ctx, boardIndex, this.clock);
     if (this.art.ready) this.drawImageEffects(ctx, boardIndex);
     for (const e of (this.art.ready ? [] : game.effects.filter(e => e.board === boardIndex).slice(-100))) {
       const elapsed = Math.max(0, game.time - (e.born || game.time) + blend * 0.08);
@@ -198,29 +181,41 @@ export class ArenaRenderer {
     }
     ctx.fillStyle = board.monsters.length >= 75 ? '#ffa99b' : '#b3c4b2'; ctx.font = '11px monospace';
     ctx.fillText(`${board.monsters.length} HOSTILES / ${board.spawn.length} INCOMING`, 400, 27);
+    this.championSkillVisuals.draw(ctx,game,boardIndex,this.verticalScale,this.positions,position);
+    this.bossVisuals.draw(ctx,game,board,owners,this.positions,this.verticalScale,position);
     ctx.textAlign = 'left';
   }
   drawCharacterSprite(ctx, c, type, ally = false) {
     const attack = this.attacks.get(c.id);
     const age = attack ? this.clock - attack.start : 10;
-    const phase = Math.max(0, 1 - age / 0.38);
+    const duration=Math.max(.2,Math.min(.64,1/stats(c).speed));
+    const phase = Math.max(0, 1 - age / duration);
     const pulse = Math.sin(Math.min(1, age / 0.38) * Math.PI);
     const angle = attack ? Math.atan2(attack.ty - attack.y, attack.tx - attack.x) : 0;
-    const facing = c.destination ? (c.destination.x < c.x ? -1 : 1) : attack && Math.cos(angle) < 0 ? -1 : 1;
-    const moving = !!c.destination && this.current.status === 'playing';
-    const bob = moving ? Math.sin(this.clock * 14 + c.id) * 3 : Math.sin(this.clock * 2.3 + c.id) * 0.8;
+    const walk=advanceWalk(this.walkStates.get(c.id),c,this.clock,this.current.status,this.verticalScale||1);
+    this.walkStates.set(c.id,walk);
+    const moving=walk.moving;
+    const facing=moving?walk.facing:attack?(Math.cos(angle)<0?-1:1):walk.facing;
+    const bob=moving?0:Math.sin(this.clock*2.3+c.id)*.8;
     let dx = 0, dy = 0, rotation = 0;
-    if (phase > 0) {
+    if (!moving && phase > 0 && !this.art.attackFrames[type]) {
       if ([2, 9].includes(type)) { dx = Math.cos(angle) * pulse * 13; dy = Math.sin(angle) * pulse * 9; rotation = facing * pulse * 0.23; }
       else if ([0, 1, 8].includes(type)) { dx = -Math.cos(angle) * pulse * 5; rotation = -facing * pulse * 0.09; }
       else { dy = -pulse * 6; rotation = facing * pulse * 0.06; }
     }
-    ctx.save(); ctx.translate(c.x + dx, c.y + dy + bob); ctx.rotate(rotation); ctx.scale(facing, 1);
-    const tint = Math.floor(c.base / 10) * 3;
+    ctx.save(); ctx.translate(c.x + dx, c.y + dy + bob); ctx.rotate(rotation); ctx.scale(facing, 1 / (this.verticalScale || 1));
+    const tint = 0;
     ctx.filter = ally ? 'grayscale(1) brightness(.72)' : `hue-rotate(${tint}deg) saturate(${1 + c.tier * 0.045})`;
-    ctx.drawImage(this.art.characters[type], -34, -78, 68, 100);
+    const frames=this.art.attackFrames[type];
+    const walkingFrame=moving?this.art.walkFrames[type]?.[walk.frame]:null;
+    const frame=walkingFrame||frames?.[!moving&&c.combatState!=='fear'&&age>=0&&age<duration?Math.min(7,Math.floor(age/duration*8)):7]||this.art.characters[type];
+    // Match the idle character's height, independent of each sheet's transparent padding.
+    const idle=frames?.[7];
+    const reference=walkingFrame||idle||frame;
+    const height=reference.bodyHeight?58*reference.height/reference.bodyHeight:80;
+    const width=height*frame.width/frame.height;ctx.drawImage(frame,-width/2,frame.anchorY ? -height*frame.anchorY+12 : 12-height*.9,width,height);
     ctx.filter = 'none'; ctx.restore();
-    if (phase > 0 && type >= 3 && type <= 7) {
+    if (!moving && phase > 0 && type >= 3 && type <= 7) {
       ctx.save(); ctx.globalCompositeOperation = 'screen'; ctx.globalAlpha = phase * 0.5;
       ctx.drawImage(this.art.effects[type], c.x - 23, c.y - 37, 46, 46); ctx.restore();
     }
@@ -230,11 +225,12 @@ export class ArenaRenderer {
     for (const e of this.visualEffects) {
       if (e.board !== boardIndex) continue;
       const age = this.clock - e.start;
+      if(e.support){const target=this.positions.get(e.target)||{x:e.tx,y:e.ty};ctx.save();const source=this.positions.get(e.source)||e;ctx.strokeStyle='#ffdf82';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(source.x,source.y);ctx.lineTo(target.x,target.y);ctx.stroke();ctx.strokeStyle='#ffe88c';ctx.globalAlpha=Math.max(0,1-age/.75);ctx.lineWidth=3;ctx.beginPath();ctx.ellipse(target.x,target.y+12,28+age*15,12+age*8,0,0,Math.PI*2);ctx.stroke();ctx.font='bold 13px sans-serif';ctx.fillStyle='#ffe88c';ctx.fillText('✦ BUFF',target.x-24,target.y-65-age*20);ctx.restore();continue;}
       const type = e.type ?? 0;
       const target = this.positions.get(e.target);
       const tx = target?.x ?? e.tx, ty = target?.y ?? e.ty;
       const angle = Math.atan2(ty - e.y, tx - e.x);
-      const melee = type === 2 || type === 9;
+      const melee = [2,11,12].includes(type);
       const travel = melee ? 0.05 : type === 0 ? 0.08 : 0.18;
       ctx.save(); ctx.globalCompositeOperation = 'screen';
       if (!melee && age < travel) {
@@ -292,4 +288,22 @@ export class ArenaRenderer {
     }
     ctx.restore();
   }
+}
+
+// Advance footsteps by rendered distance, so blocked champions do not walk in place.
+export function advanceWalk(previous,c,clock,status,verticalScale=1){
+  const state=previous?{...previous}:{x:c.x,y:c.y,distance:0,lastMoved:-Infinity,facing:1,frame:0,moving:false};
+  if(status==='paused')return state;
+  const dx=c.x-state.x,dy=c.y-state.y,distance=Math.hypot(dx,dy*verticalScale);
+  state.x=c.x;state.y=c.y;
+  if(status!=='playing'){state.moving=false;state.distance=0;state.frame=0;return state;}
+  if(distance>.01&&distance<80){
+    if(!state.moving)state.distance=0;
+    state.distance+=distance;state.lastMoved=clock;
+    if(Math.abs(dx)>.05)state.facing=dx<0?-1:1;
+  }
+  const hasOrder=!!(c.destination||c.approach);
+  state.moving=clock-state.lastMoved<.12&&(distance>.01||hasOrder);
+  state.frame=Math.floor(state.distance/8)%8;
+  return state;
 }

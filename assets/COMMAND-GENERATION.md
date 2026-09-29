@@ -1,0 +1,11 @@
+# Command center artwork
+
+Generated with the built-in image_gen tool on 2026-09-27. Original files are retained under the Codex generated_images directory.
+
+## command-scenes-v1.png
+Prompt: Create a polished fantasy game UI ART ASSET ATLAS, not a screenshot. Landscape 1536x1024. Exact 2 columns x 3 rows, six equal rectangular cells edge to edge no gaps, no text, no letters, no UI. Consistent richly painted chibi RPG Korean fantasy illustration with navy shadows and gold light. Cell top left: heroic party brown-haired swordsman red scarf, blue ice witch, red fire witch, dwarf and elf before magnificent sunlit castle, subjects on right half left half dark scenic space. Top right: magnificent sunlit castle amidst blue mountains empty landscape. Middle left: orange glowing blacksmith forge with swords and anvil, no people. Middle right: three heroes seen from behind in grand golden throne hall, dramatic shafts of light. Bottom left: peaceful enchanted green forest path ruins. Bottom right: ominous volcanic fortress red lava sky. Each cell independent wide cinematic art used as website banners. Full bleed, no borders, no text.
+
+## equipment-icons-v1.png
+Prompt: Game equipment icon sprite atlas 1536x1024, exact 5 columns x 4 rows equal cells, 20 isolated large objects on uniform almost black navy background. No text no labels no borders. Beautiful polished hand painted fantasy RPG loot, gold purple blue green glowing edges, high detail. Row1 five distinct swords: fire sword, ice sword, leaf blade, purple arcane sword, gold holy sword. Row2 five fantasy armored gloves: fire gauntlet, ice gauntlet, leather glove, purple claw glove, gold gauntlet. Row3 five boots: red armored, blue frost, green ranger leather, purple mage boots, gold winged boots. Row4 five necklaces: ruby pendant, sapphire pendant, emerald pendant, amethyst pendant, gold sun pendant. Exactly one object centered fully visible in each cell with 15 percent margin. No other objects.
+
+Scenes use a 2x3 CSS background atlas; equipment uses a 5x4 atlas. Equipment art is shared between effects while each card displays its actual name and numerical effect. Character art uses the existing champions-v3.png atlas. No sample ranking records or collection progress were inserted.
