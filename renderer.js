@@ -67,7 +67,7 @@ export class ArenaRenderer {
   constructor() {
     this.previous = null; this.current = null; this.received = 0; this.positions = new Map();
     this.walkStates = new Map();
-    this.blessingFrame=new Image();this.blessingFrame.src='/assets/blessing-frame-v1.png';this.art = new ArtAssets(); this.attacks = new Map(); this.seen = new Map(); this.visualEffects = [];
+    this.projectileAtlas=new Image();this.projectileAtlas.src='/assets/projectiles-v1.png';this.blessingFrame=new Image();this.blessingFrame.src='/assets/blessing-frame-v1.png';this.art = new ArtAssets(); this.attacks = new Map(); this.seen = new Map(); this.visualEffects = [];
     this.monsterVisuals = new MonsterVisuals(this.art);
     this.mapArt = new MapArt(); this.bossVisuals = new BossSkillVisuals(); this.championSkillVisuals = new ChampionSkillVisuals();
     this.clock = 0; this.lastFrame = performance.now();
@@ -231,14 +231,17 @@ export class ArenaRenderer {
       const tx = target?.x ?? e.tx, ty = target?.y ?? e.ty;
       const angle = Math.atan2(ty - e.y, tx - e.x);
       const melee = [2,11,12].includes(type);
-      const travel = melee ? 0.05 : type === 0 ? 0.08 : 0.18;
+      const travel = melee ? 0.05 : Math.min(.32,Math.max(.14,Math.hypot(tx-e.x,ty-e.y)/(type===0?1500:950)));
       ctx.save(); ctx.globalCompositeOperation = 'screen';
       if (!melee && age < travel) {
         const t = age / travel;
         const px = e.x + (tx - e.x) * t, py = e.y - 24 + (ty - e.y + 24) * t;
-        ctx.translate(px, py); ctx.rotate(angle);
-        const w = type === 1 ? 42 : type === 0 ? 30 : 28;
-        ctx.globalAlpha = 0.9; ctx.drawImage(this.art.effects[type], -w / 2, -w / 2, w, w);
+        ctx.translate(px, py); ctx.rotate(Math.atan2(ty-e.y+24,tx-e.x));
+        const w=type===14?58:type===0?42:48;
+        if(this.projectileAtlas?.complete&&this.projectileAtlas.naturalWidth){
+          const cell=projectileCell(type,t,this.projectileAtlas.naturalWidth,this.projectileAtlas.naturalHeight);
+          for(let trail=2;trail>=0;trail--){ctx.globalAlpha=trail?.12/trail:.95;ctx.drawImage(this.projectileAtlas,...cell,-w*.65-trail*9,-w*.28,w,w*.56);}
+        }else{ctx.globalAlpha=.9;ctx.drawImage(this.art.effects[type],-w/2,-w/2,w,w);}
       } else {
         const t = Math.min(1, (age - travel) / 0.5);
         const size = (type === 0 || type === 1 ? 37 : type === 8 ? 92 : 74) * (0.55 + Math.sin(t * Math.PI * 0.65) * 0.75);
@@ -317,4 +320,11 @@ export function drawBlessingBadges(ctx,c,time,verticalScale=1,frame,clock=0){
  if(frame?.complete&&frame.naturalWidth){ctx.save();if(kind==='speed')ctx.filter='hue-rotate(145deg)';ctx.drawImage(frame,frame.naturalWidth*.025,frame.naturalHeight*.26,frame.naturalWidth*.95,frame.naturalHeight*.42,-57,y,114,21);ctx.restore();}else{ctx.fillStyle='#071729';ctx.fillRect(-54,y+2,108,17);ctx.strokeStyle=color;ctx.strokeRect(-54,y+2,108,17);}
  ctx.strokeStyle='#06101f';ctx.lineWidth=2.5;const label=(kind==='damage'?'피해':'공속')+' +'+Math.round(b.amount*100)+'% · '+Math.ceil(b.until-time)+'초';ctx.strokeText(label,5,y+11);ctx.fillStyle=color;ctx.fillText(label,5,y+11);
  });ctx.restore();
+}
+
+export function projectileCell(type,progress,width,height){
+ const row=({0:0,1:1,3:2,4:3,5:4,6:5,7:6,8:3,10:7,13:5,14:0})[type]??0;
+ const edges=[0,.155,.285,.411,.538,.657,.779,.895,1];
+ const frame=Math.min(7,Math.max(0,Math.floor(progress*8)));
+ return [edges[frame]*width,row*height/8,(edges[frame+1]-edges[frame])*width,height/8];
 }

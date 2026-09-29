@@ -1,0 +1,2 @@
+import test from 'node:test';import assert from 'node:assert/strict';import {projectileCell} from './renderer.js';
+test('projectile frames remain in atlas across all ranged types and flight phases',()=>{for(const type of [0,1,3,4,5,6,7,8,10,13,14]){const cells=[];for(let i=0;i<8;i++){const [x,y,w,h]=projectileCell(type,i/8,2048,2048);assert.ok(x>=0&&y>=0&&x+w<=2048.001&&y+h<=2048);cells.push(x);}assert.equal(new Set(cells).size,8);}});
