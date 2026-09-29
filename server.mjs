@@ -5,18 +5,33 @@ import {readFile,writeFile,mkdir} from 'node:fs/promises';
 import {randomBytes,createPublicKey,verify} from 'node:crypto';
 import {createGame,action,tick,advanceStartCountdown} from './engine.js';
 const port=Number(process.env.PORT)||3000,clientId=process.env.GOOGLE_CLIENT_ID||'';
-const sessions=new Map(),rooms=new Map(),googleProfiles=new Map();let rankings=[];
+const supabaseUrl=String(process.env.SUPABASE_URL||'').replace(/\/$/,'');
+const supabaseSecret=process.env.SUPABASE_SECRET_KEY||'';
+const sessions=new Map(),rooms=new Map();let rankings=[];
 try{rankings=JSON.parse(await readFile(new URL('./data/rankings.json',import.meta.url),'utf8'));}catch{}
 const id=()=>randomBytes(16).toString('hex');
 const json=(res,status,data)=>{res.writeHead(status,{'Content-Type':'application/json','Cache-Control':'no-store'});res.end(JSON.stringify(data));};
 let keys=[],keyUntil=0;
+async function profileRequest(path,options={}){
+ if(!supabaseUrl||!supabaseSecret)throw Error('Supabase 환경변수가 설정되지 않았습니다.');
+ const r=await fetch(supabaseUrl+'/rest/v1/'+path,{...options,headers:{apikey:supabaseSecret,Authorization:'Bearer '+supabaseSecret,'Content-Type':'application/json',...(options.headers||{})}});
+ if(!r.ok)throw Error('프로필 DB 오류: '+await r.text());
+ const text=await r.text();return text?JSON.parse(text):null;
+}
+async function getGoogleNickname(uid){
+ const rows=await profileRequest('profiles?google_id=eq.'+encodeURIComponent(uid)+'&select=nickname&limit=1');
+ return rows?.[0]?.nickname||null;
+}
+async function saveGoogleNickname(uid,nickname){
+ await profileRequest('profiles',{method:'POST',headers:{Prefer:'resolution=merge-duplicates,return=minimal'},body:JSON.stringify({google_id:uid,nickname,updated_at:new Date().toISOString()})});
+}
 async function verifyGoogle(token){const parts=String(token).split('.');if(parts.length!==3)throw Error('잘못된 로그인 응답');const header=JSON.parse(Buffer.from(parts[0],'base64url')),claims=JSON.parse(Buffer.from(parts[1],'base64url'));if(header.alg!=='RS256')throw Error('지원하지 않는 서명');if(Date.now()>keyUntil){const r=await fetch('https://www.googleapis.com/oauth2/v3/certs');if(!r.ok)throw Error('Google 인증 서버 오류');keys=(await r.json()).keys;keyUntil=Date.now()+3600000;}const key=keys.find(k=>k.kid===header.kid);if(!key||!verify('RSA-SHA256',Buffer.from(parts[0]+'.'+parts[1]),createPublicKey({key,format:'jwk'}),Buffer.from(parts[2],'base64url'))||claims.aud!==clientId||!['https://accounts.google.com','accounts.google.com'].includes(claims.iss)||!Number.isFinite(claims.exp)||claims.exp*1000<Date.now()||!claims.sub)throw Error('Google 인증 검증 실패');return claims;}
 function summary(r){return {id:r.id,name:r.name,mode:r.options.mode,random:r.options.random,hard:r.options.hard,capacity:r.capacity,players:r.users.map(u=>({id:u.id,name:u.name})),host:r.users[0]?.id,messages:r.messages||[],status:r.game?.status||'waiting'};}
 function send(r){for(const [uid,res]of r.streams){if(res.writableLength>1000000){res.destroy();r.streams.delete(uid);}else res.write(`data: ${JSON.stringify({room:summary(r),game:gameForPlayer(r.game,uid)})}\n\n`);}}
 function leave(user){const r=rooms.get(user.room);if(!r)return;const stream=r.streams.get(user.id);if(stream){stream.end();r.streams.delete(user.id);}if(r.game&&r.game.status!=='ended'){r.game.status='ended';r.game.message='플레이어가 퇴장하여 게임이 종료되었습니다.';r.cancelled=true;}r.users=r.users.filter(u=>u.id!==user.id);user.room=null;if(!r.users.length)rooms.delete(r.id);else send(r);}
 const server=http.createServer(async(req,res)=>{try{const url=new URL(req.url,'http://localhost');if(req.method==='POST'){const origin=req.headers.origin;const forwardedProto=String(req.headers['x-forwarded-proto']||'').split(',')[0].trim();const expectedOrigin=process.env.PUBLIC_ORIGIN||`${forwardedProto||'http'}://${req.headers.host}`;if(origin&&origin!==expectedOrigin)return json(res,403,{error:'다른 출처의 요청은 허용되지 않습니다.'});}let token=req.headers.cookie?.match(/(?:^|; )session=([a-f0-9]+)/)?.[1],user=sessions.get(token);if(user&&Date.now()-user.seen>86400000){sessions.delete(token);user=null;}if(user)user.seen=Date.now();let body={};if(req.method==='POST'){let chunks='',size=0;for await(const chunk of req){size+=chunk.length;if(size>16000)return json(res,413,{error:'요청이 너무 큽니다.'});chunks+=chunk;}body=JSON.parse(chunks||'{}');}
 if(url.pathname==='/api/config')return json(res,200,{clientId});
-if(url.pathname==='/api/login'&&req.method==='POST'){if(sessions.size>5000)return json(res,503,{error:'서버가 혼잡합니다.'});let name=String(body.name||'수호자').trim().slice(0,16),uid=id(),google=false;if(body.credential){if(!clientId)return json(res,503,{error:'Google 클라이언트 ID가 설정되지 않았습니다.'});const c=await verifyGoogle(body.credential);uid='g_'+c.sub;google=true;const saved=googleProfiles.get(uid);if(!saved&&!body.nickname)return json(res,200,{needsNickname:true,googleToken:body.credential});name=String(saved||body.nickname||'수호자').trim().slice(0,16);if(!name)return json(res,400,{error:'닉네임을 입력하세요.'});if(!saved)googleProfiles.set(uid,name);}if(user)leave(user);for(const [k,s]of sessions)if(s.id===uid){leave(s);sessions.delete(k);}token=id();user={id:uid,name:name||'수호자',google,seen:Date.now(),room:null};sessions.set(token,user);res.setHeader('Set-Cookie',`session=${token}; HttpOnly; SameSite=Strict; Path=/; Max-Age=86400${process.env.PUBLIC_ORIGIN?.startsWith('https:')?'; Secure':''}`);return json(res,200,{user:{id:user.id,name:user.name,google}});}
+if(url.pathname==='/api/login'&&req.method==='POST'){if(sessions.size>5000)return json(res,503,{error:'서버가 혼잡합니다.'});let name=String(body.name||'수호자').trim().slice(0,16),uid=id(),google=false;if(body.credential){if(!clientId)return json(res,503,{error:'Google 클라이언트 ID가 설정되지 않았습니다.'});const c=await verifyGoogle(body.credential);uid='g_'+c.sub;google=true;const saved=await getGoogleNickname(uid);if(!saved&&!body.nickname)return json(res,200,{needsNickname:true,googleToken:body.credential});name=String(saved||body.nickname||'수호자').trim().slice(0,16);if(!name)return json(res,400,{error:'닉네임을 입력하세요.'});if(!saved)await saveGoogleNickname(uid,name);}if(user)leave(user);for(const [k,s]of sessions)if(s.id===uid){leave(s);sessions.delete(k);}token=id();user={id:uid,name:name||'수호자',google,seen:Date.now(),room:null};sessions.set(token,user);res.setHeader('Set-Cookie',`session=${token}; HttpOnly; SameSite=Strict; Path=/; Max-Age=86400${process.env.PUBLIC_ORIGIN?.startsWith('https:')?'; Secure':''}`);return json(res,200,{user:{id:user.id,name:user.name,google}});}
 if(url.pathname==='/api/me')return json(res,200,{user:user?{id:user.id,name:user.name,google:user.google}:null,room:user?.room&&rooms.has(user.room)?user.room:null});
 if(url.pathname==='/api/rankings')return json(res,200,rankings.slice(0,50));
 if(url.pathname.startsWith('/api/')&&!user)return json(res,401,{error:'먼저 로그인하세요.'});
