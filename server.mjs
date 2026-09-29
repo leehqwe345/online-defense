@@ -14,7 +14,7 @@ const json=(res,status,data)=>{res.writeHead(status,{'Content-Type':'application
 let keys=[],keyUntil=0;
 async function profileRequest(path,options={}){
  if(!supabaseUrl||!supabaseSecret)throw Error('Supabase 환경변수가 설정되지 않았습니다.');
- const r=await fetch(supabaseUrl+'/rest/v1/'+path,{...options,headers:{apikey:supabaseSecret,Authorization:'Bearer '+supabaseSecret,'Content-Type':'application/json',...(options.headers||{})}});
+ const r=await fetch(supabaseUrl+'/rest/v1/'+path,{...options,headers:{apikey:supabaseSecret,'Content-Type':'application/json',...(options.headers||{})}});
  if(!r.ok)throw Error('프로필 DB 오류: '+await r.text());
  const text=await r.text();return text?JSON.parse(text):null;
 }
