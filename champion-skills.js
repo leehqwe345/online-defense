@@ -20,7 +20,7 @@ export const SKILL_ATLAS='/assets/champion-skills-v1.png';
 export function skillMarkup(c,time){const skill=CHAMPION_SKILLS[c.base];if(!skill)return '';const cooldown=skill.cooldown*(1-talentTotals(c.talents).cooldown);const remaining=Math.max(0,(c.skillReadyAt??time+cooldown)-time);return `<section class="champion-skill"><span class="champion-skill-icon" style="background-position:${c.base%5*25}% ${Math.floor(c.base/5)*50}%"></span><div><strong>${skill.name}</strong><small>${skill.description}</small><b>${c.tier<4?'유니크 등급부터 해금':remaining>0?'재사용 '+Math.ceil(remaining)+'초':'자동 사용 준비'} · ${Number(cooldown.toFixed(1))}초</b><small>에픽·레전더리: 스킬별 피해·범위·버프 강화 / 레전더리 축복 2명</small></div></section>`;}
 function show(g,bi,c,type,point,size=110){g.skillEffects??=[];g.skillEffects.push({source:c.id,type,board:bi,x:point.x,y:point.y,size,born:g.time,until:g.time+1.2});}
 function buff(c,kind,amount,until,now,source){c.supportBuffs??={};const old=c.supportBuffs[kind];if(!old||old.until<=now||old.amount<=amount)c.supportBuffs[kind]={amount,until,source};}
-export function tryChampionSkill(g,b,owners,p,c,near,api){
+export function tryChampionSkill(g,b,owners,p,c,near,api){if(c.silenceUntil>g.time)return false;
  const type=c.base,skill=CHAMPION_SKILLS[type];if(c.tier<4||c.destination||c.fearUntil>g.time||['moving','approaching'].includes(c.combatState)||!near.length||g.time<(c.skillReadyAt??Infinity))return false;
  const s=api.stats(c),power=(1+(c.tier-4)*.25)*(1+(s.skillPower||0)),radius=(110+(c.tier-4)*20)*(1+(s.skillRadius||0))/g.mapScale;
  const living=()=>b.monsters.filter(m=>m.hp>0),point=m=>api.position(m.p,m),distance=(a,z)=>Math.hypot(a.x-z.x,a.y-z.y);

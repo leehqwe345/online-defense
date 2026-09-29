@@ -3,7 +3,7 @@ import {skillMarkup} from './champion-skills.js';
 import {bossNoticeMarkup} from './boss-skills.js';
 import {MONSTERS,TRAITS,familyForRound,monsterDefinition,traitDefinition} from './monsters.js';
 import { portraitMarkup, monsterPortraitMarkup, monsterName, equipmentMarkup } from './art.js';
-import { ELEMENTS, CHAMPIONS, MAX_CHAMPIONS, ITEMS, TIERS, COLORS, SLOTS, IMMUNITIES, chances, stats, itemDescription, monsterProfile } from './engine.js';
+import { monsterCount, ELEMENTS, CHAMPIONS, MAX_CHAMPIONS, ITEMS, TIERS, COLORS, SLOTS, IMMUNITIES, chances, stats, itemDescription, monsterProfile } from './engine.js';
 import { mapForRound } from './maps.js';
 import { TARGETS, mergePartner } from './gameplay.js';
 
@@ -87,7 +87,7 @@ function arrangeBattleScreen(game) {
 
 export function updateCombat(game, room, user, selected, selectedItem, boardIndex, connected, abilities, effects, selectedEnemy) {
   const p = game.players.find(player => player.id === user.id);
-  const board = game.boards[boardIndex];const enemyCount=game.mode==='coop'?game.boards.reduce((sum,b)=>sum+b.monsters.length,0):board.monsters.length;
+  const board = game.boards[boardIndex];const enemyCount=game.mode==='coop'?game.boards.reduce((sum,b)=>sum+b.monsters.length,0):monsterCount(game,board);
   const peakDps=Math.max(1,...p.champions.map(c=>c.dps||0));
   html('#champion-dps', [...p.champions].sort((a,b)=>(b.dps||0)-(a.dps||0)).map(c=>`<div class="dps-row" style="--dps-width:${Math.max(0,(c.dps||0)/peakDps*100)}%">${portraitMarkup(CHAMPIONS[c.base].type,'dps-portrait',0)}<span style="color:${COLORS[c.tier]}">${CHAMPIONS[c.base].name} <small>#${c.id}</small></span><b>${(c.dps||0).toFixed(1)}</b>${Object.keys(c.supportBuffs||{}).length?'<small class="buff-recipient">✦ 축복 중</small>':''}</div>`).join('')||'<p>소환한 챔피언이 없습니다.</p>');
   const editable = p.alive && game.status !== 'ended' && connected;
@@ -108,7 +108,7 @@ export function updateCombat(game, room, user, selected, selectedItem, boardInde
   text('#wave-clock', game.status === 'ready' ? '준비 중' : game.round === 100 ? 'LAST WAVE' : game.mode === 'versus' ? '상대와 경쟁' : `${Math.ceil(remaining)}s`);
   $('#wave-clock').classList.toggle('danger', countdown && remaining <= 10);
   $('#wave-fill').style.width = `${countdown ? remaining / (game.waveInterval || 60) * 100 : 100}%`;
-  text('#round-rule', game.mode==='coop'?'개인 전장 · 공동 한도 100 · 월드보스 60초 내 처치':game.mode === 'versus' ? '먼저 처치하면 모두에게 다음 웨이브' : game.round === 100 ? '마지막 적까지 처치하세요' : '전멸 즉시 또는 60초마다 다음 웨이브');
+  text('#round-rule', game.mode==='coop'?'개인 전장 · 공동 한도 100 · 다음 월드보스 출현 전 처치':game.mode === 'versus' ? '먼저 처치하면 모두에게 다음 웨이브' : game.round === 100 ? '마지막 적까지 처치하세요' : '전멸 즉시 또는 60초마다 다음 웨이브');
   if ($('#pause-game')) {
     text('#pause-game', game.status === 'paused' ? '▶ 전투 재개' : 'Ⅱ 일시정지');
     $('#pause-game').disabled = game.talentPause || !connected || !['playing', 'paused'].includes(game.status);
@@ -117,7 +117,7 @@ export function updateCombat(game, room, user, selected, selectedItem, boardInde
   const overlay = $('#arena-state');
   overlay.hidden = !['ready', 'paused'].includes(game.status);
   html('#arena-state', game.status === 'paused' ? (game.talentPause?'<b>특성을 선택하세요</b><span>위쪽 카드 3장 중 하나를 고르면 전투가 재개됩니다.</span>':'<b>Ⅱ PAUSED</b><span>배치와 장비를 정비하고 전투를 재개하세요.</span>') : '<b>BUILD YOUR DEFENSE</b><span>챔피언 소환 → 자동 배치 → 전투 시작</span>');
-  html('#board-tabs', game.mode !== 'single' ? game.players.map((q, i) => `<button data-board="${i}" class="${boardIndex === i ? 'selected' : ''}">${escape(q.name)}의 맵 (${game.boards[i].monsters.length}) ${!q.alive ? '· 탈락' : ''}</button>`).join('')+(game.mode==='coop'?`<button data-board="${game.players.length}" class="${boardIndex===game.players.length?'selected':''}">월드보스 ${game.boards[game.players.length].monsters.length?'· '+Math.ceil(Math.max(0,game.boards[game.players.length].deadline-game.time))+'초':'· 대기'}</button>`:'') : '');
+  html('#board-tabs', game.mode !== 'single' ? game.players.map((q, i) => `<button data-board="${i}" class="${boardIndex === i ? 'selected' : ''}">${escape(q.name)}의 맵 (${monsterCount(game,game.boards[i])}) ${!q.alive ? '· 탈락' : ''}</button>`).join('')+(game.mode==='coop'?`<button data-board="${game.players.length}" class="${boardIndex===game.players.length?'selected':''}">월드보스 ${game.boards[game.players.length].monsters.length?'· '+game.boards[game.players.length].expiresRound+'R 전까지':'· 대기'}</button>`:'') : '');
   text('#hero-count', `${p.champions.length} / ${MAX_CHAMPIONS}`);
   text('#item-count', `${p.items.length} / 80`);
   const search = $('#hero-search').value;
@@ -155,8 +155,9 @@ export function updateCombat(game, room, user, selected, selectedItem, boardInde
   preview.innerHTML = (game.random ? [0,10,20,30] : [familyForRound(next)]).map(family=>monsterPortraitMarkup({family})).join('')+(next%5===0?monsterPortraitMarkup({boss:true,round:next}):'');
   text('#map-stage', `${theme.name} · ${theme.first}~${theme.last}라운드`);
   const enemy = board.monsters.find(m => m.id === selectedEnemy);
-  html('#inspect-enemy', enemy ? `${monsterPortraitMarkup(enemy)}<h3>${monsterName(enemy)}</h3><p class="muted">${enemy.boss ? '보스' : '몬스터'} #${enemy.id} · HP ${Math.max(0, Math.ceil(enemy.hp)).toLocaleString()} / ${Math.ceil(enemy.maxHp).toLocaleString()}</p><p style="color:${traitDefinition(enemy).color}">${enemy.boss?'보스 전술':traitDefinition(enemy).name}</p><p class="muted">${enemy.boss?'30초마다 공포·쇠약·회복·가속·보호막을 순서대로 사용합니다.':traitDefinition(enemy).description}</p>${enemy.defenses.map(d => `<span class="defense-chip">${d}</span>`).join('')}` : '<p class="muted">길 위의 몬스터를 클릭하면 외형과 방어속성을 확인할 수 있습니다.</p>');
-  renderDetail(game, p, selected, selectedItem, editable, abilities, effects);
+  html('#inspect-enemy', enemy ? `${monsterPortraitMarkup(enemy)}<h3>${monsterName(enemy)}</h3><p class="muted">${enemy.boss ? '보스' : '몬스터'} #${enemy.id} · HP ${Math.max(0, Math.ceil(enemy.hp)).toLocaleString()} / ${Math.ceil(enemy.maxHp).toLocaleString()}</p><p style="color:${traitDefinition(enemy).color}">${enemy.boss?'보스 전술':traitDefinition(enemy).name}</p><p class="muted">${enemy.boss?'30초마다 공포·쇠약·회복·가속·보호막·서리 폭풍·암흑 장막·마력 봉인을 순환 사용합니다.':traitDefinition(enemy).description}</p>${enemy.defenses.map(d => `<span class="defense-chip">${d}</span>`).join('')}` : '<p class="muted">길 위의 몬스터를 클릭하면 외형과 방어속성을 확인할 수 있습니다.</p>');
+  let worldNotice=document.querySelector('#world-boss-persistent');if(!worldNotice){worldNotice=document.createElement('div');worldNotice.id='world-boss-persistent';document.querySelector('.arena-wrap').append(worldNotice);}const world=game.mode==='coop'?game.boards[game.players.length]:null;worldNotice.hidden=!world?.monsters.some(m=>m.hp>0);if(!worldNotice.hidden)worldNotice.textContent='월드보스가 소환되었습니다 · 5라운드 이내 처치하지 못할 시 게임오버 · '+world.expiresRound+'라운드 진입 전 처치';
+  if(enemy){lastDetailKey=null;const detail=$('#detail');detail._lastHTML=null;detail.innerHTML='<div class="monster-detail-art">'+monsterPortraitMarkup(enemy)+'</div><h3>'+monsterName(enemy)+'</h3><p>'+ (enemy.worldBoss?'월드보스':enemy.boss?'보스':'일반 몬스터')+' · '+enemy.round+'라운드</p><progress max="'+enemy.maxHp+'" value="'+Math.max(0,enemy.hp)+'"></progress><p>체력 '+Math.ceil(Math.max(0,enemy.hp)).toLocaleString()+' / '+Math.ceil(enemy.maxHp).toLocaleString()+'</p><p>누적 몬스터 집계: '+(enemy.boss&&game.mode!=='coop'?10:1)+'마리</p><h4>방어 속성</h4>'+enemy.defenses.map(d=>'<span class="defense-chip">'+d+'</span>').join('')+'<h4>'+traitDefinition(enemy).name+'</h4><p>'+traitDefinition(enemy).description+'</p><p>이동 속도 '+(enemy.speed*2560).toFixed(1)+' · 둔화 '+Math.ceil(enemy.slow||0)+'초 · 기절 '+(enemy.stun||0).toFixed(1)+'초</p>'+(enemy.boss?'<p>다음 스킬까지 '+Math.ceil(Math.max(0,enemy.nextSkillAt-game.time))+'초</p>':'');}else renderDetail(game, p, selected, selectedItem, editable, abilities, effects);
 }
 
 function renderDetail(game, player, selected, selectedItem, editable, abilities, effects) {
@@ -164,7 +165,7 @@ function renderDetail(game, player, selected, selectedItem, editable, abilities,
   const item = player.items.find(i => i.id === selectedItem);
   const key = JSON.stringify({
     selected, selectedItem, editable, skillSecond:Math.ceil(game.time),
-    champion: champion && { base: champion.base, tier: champion.tier, world:champion.world, equipment: champion.equipment, growth: champion.growth, talents:champion.talents, target: champion.target, autoApproach: champion.autoApproach, combatState: champion.combatState, supportBuffs:champion.supportBuffs },
+    champion: champion && { base: champion.base, tier: champion.tier, world:champion.world, equipment: champion.equipment, growth: champion.growth, talents:champion.talents, synergyBonus:champion.synergyBonus, target: champion.target, autoApproach: champion.autoApproach, combatState: champion.combatState, supportBuffs:champion.supportBuffs },
     item,
     roster: player.champions.map(c => [c.id, c.base, c.tier]),
     bag: player.items.map(i => [i.id, i.base, i.tier]),

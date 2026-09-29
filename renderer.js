@@ -1,7 +1,7 @@
 import {ChampionSkillVisuals} from './champion-skill-visuals.js';
 import {BossSkillVisuals} from './boss-skills.js';
 import {MONSTERS,traitDefinition} from './monsters.js';
-import { boardOwners, CHAMPIONS, COLORS, stats, position } from './engine.js';
+import { monsterCount, boardOwners, CHAMPIONS, COLORS, stats, position } from './engine.js';
 import { ArtAssets, MONSTER_NAMES, monsterName } from './art.js';
 import { MonsterVisuals } from './monster-visuals.js';
 import { MapArt, MAPS } from './maps.js';
@@ -67,7 +67,7 @@ export class ArenaRenderer {
   constructor() {
     this.previous = null; this.current = null; this.received = 0; this.positions = new Map();
     this.walkStates = new Map();
-    this.art = new ArtAssets(); this.attacks = new Map(); this.seen = new Map(); this.visualEffects = [];
+    this.blessingFrame=new Image();this.blessingFrame.src='/assets/blessing-frame-v1.png';this.art = new ArtAssets(); this.attacks = new Map(); this.seen = new Map(); this.visualEffects = [];
     this.monsterVisuals = new MonsterVisuals(this.art);
     this.mapArt = new MapArt(); this.bossVisuals = new BossSkillVisuals(); this.championSkillVisuals = new ChampionSkillVisuals();
     this.clock = 0; this.lastFrame = performance.now();
@@ -117,7 +117,7 @@ export class ArenaRenderer {
     bg.addColorStop(0, '#1c3028'); bg.addColorStop(1, '#101c1b');
     ctx.fillStyle = bg; ctx.fillRect(0, 0, 800, 800);
     const theme = this.mapArt.draw(ctx, game.round || 1, this.clock);
-    if(board.world){ctx.fillStyle='#18112bbf';ctx.fillRect(0,0,800,800);ctx.strokeStyle='#b793fa';ctx.lineWidth=3;ctx.beginPath();ctx.ellipse(400,400,270,280,0,0,Math.PI*2);ctx.stroke();ctx.save();ctx.translate(400,570);ctx.scale(1,1/this.verticalScale);ctx.textAlign='center';ctx.font='bold 24px sans-serif';ctx.fillStyle='#ead1ff';ctx.fillText('WORLD BOSS',0,0);ctx.font='14px sans-serif';const boss=board.monsters[0];ctx.fillText(boss?'HP '+Math.ceil(boss.hp).toLocaleString()+' / '+Math.ceil(boss.maxHp).toLocaleString()+' · '+Math.ceil(Math.max(0,board.deadline-game.time))+'초':'5라운드마다 출현 · 챔피언을 파견하세요',0,28);ctx.restore();}else this.mapArt.drawRoad(ctx, theme);
+    if(board.world){ctx.fillStyle='#18112bbf';ctx.fillRect(0,0,800,800);ctx.strokeStyle='#b793fa';ctx.lineWidth=3;ctx.beginPath();ctx.ellipse(400,400,270,280,0,0,Math.PI*2);ctx.stroke();ctx.save();ctx.translate(400,570);ctx.scale(1,1/this.verticalScale);ctx.textAlign='center';ctx.font='bold 24px sans-serif';ctx.fillStyle='#ead1ff';ctx.fillText('WORLD BOSS',0,0);ctx.font='14px sans-serif';const boss=board.monsters[0];ctx.fillText(boss?'HP '+Math.ceil(boss.hp).toLocaleString()+' / '+Math.ceil(boss.maxHp).toLocaleString()+' · '+board.expiresRound+'라운드 전까지':'5라운드마다 출현 · 챔피언을 파견하세요',0,28);ctx.restore();}else this.mapArt.drawRoad(ctx, theme);
     ctx.textAlign = 'center';
     for (const m of board.monsters) {
       const old = previousMonsters.get(m.id) || m;
@@ -158,7 +158,7 @@ export class ArenaRenderer {
       for (let i = 0; i <= c.tier; i++) ctx.fillRect(c.x - c.tier * 3 + i * 6 - 1.5, c.y + 26, 3, 3);
       {
         ctx.save();ctx.translate(c.x,c.y+32);ctx.scale(1,1/this.verticalScale);ctx.font='bold 11px sans-serif';const name=CHAMPIONS[c.base].name;const labelWidth=ctx.measureText(name).width+10;ctx.fillStyle='#03101ee8';ctx.fillRect(-labelWidth/2,-12,labelWidth,16);ctx.strokeStyle='#00101b';ctx.lineWidth=3;ctx.strokeText(name,0,0);ctx.fillStyle='#f5f7ff';ctx.fillText(name,0,0);ctx.restore();
-        const buffs=Object.entries(c.supportBuffs||{}).filter(([,b])=>b.until>game.time);if(buffs.length){ctx.save();ctx.strokeStyle='#ffe48b';ctx.lineWidth=3;ctx.beginPath();ctx.ellipse(c.x,c.y+12,26,11,0,0,Math.PI*2);ctx.stroke();ctx.translate(c.x,c.y-65);ctx.scale(1,1/this.verticalScale);ctx.font='bold 11px sans-serif';ctx.fillStyle='#ffe48b';ctx.strokeStyle='#12101d';ctx.lineWidth=4;const label=buffs.map(([k,b])=>(k==='damage'?'✦ 피해':'✦ 공속')+' +'+Math.round(b.amount*100)+'% '+Math.ceil(b.until-game.time)+'s').join(' / ');ctx.strokeText(label,0,0);ctx.fillText(label,0,0);ctx.restore();}
+        drawBlessingBadges(ctx,c,game.time,this.verticalScale,this.blessingFrame,this.clock);
       }
 
     }
@@ -180,7 +180,7 @@ export class ArenaRenderer {
       ctx.globalAlpha = 1;
     }
     ctx.fillStyle = board.monsters.length >= 75 ? '#ffa99b' : '#b3c4b2'; ctx.font = '11px monospace';
-    ctx.fillText(`${board.monsters.length} HOSTILES / ${board.spawn.length} INCOMING`, 400, 27);
+    ctx.fillText(`${monsterCount(game,board)} HOSTILES / ${board.spawn.length} INCOMING`, 400, 27);
     this.championSkillVisuals.draw(ctx,game,boardIndex,this.verticalScale,this.positions,position);
     this.bossVisuals.draw(ctx,game,board,owners,this.positions,this.verticalScale,position);
     ctx.textAlign = 'left';
@@ -225,7 +225,7 @@ export class ArenaRenderer {
     for (const e of this.visualEffects) {
       if (e.board !== boardIndex) continue;
       const age = this.clock - e.start;
-      if(e.support){const target=this.positions.get(e.target)||{x:e.tx,y:e.ty};ctx.save();const source=this.positions.get(e.source)||e;ctx.strokeStyle='#ffdf82';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(source.x,source.y);ctx.lineTo(target.x,target.y);ctx.stroke();ctx.strokeStyle='#ffe88c';ctx.globalAlpha=Math.max(0,1-age/.75);ctx.lineWidth=3;ctx.beginPath();ctx.ellipse(target.x,target.y+12,28+age*15,12+age*8,0,0,Math.PI*2);ctx.stroke();ctx.font='bold 13px sans-serif';ctx.fillStyle='#ffe88c';ctx.fillText('✦ BUFF',target.x-24,target.y-65-age*20);ctx.restore();continue;}
+      if(e.chain){const to=this.positions.get(e.target)||{x:e.tx,y:e.ty};ctx.save();ctx.globalAlpha=Math.max(0,1-age/.5);ctx.strokeStyle='#aee8ff';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(e.x,e.y);ctx.lineTo((e.x+to.x)/2+8,(e.y+to.y)/2-10);ctx.lineTo(to.x,to.y);ctx.stroke();ctx.restore();continue;}if(e.support){const target=this.positions.get(e.target)||{x:e.tx,y:e.ty};ctx.save();const source=this.positions.get(e.source)||e;ctx.strokeStyle='#ffdf82';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(source.x,source.y);ctx.lineTo(target.x,target.y);ctx.stroke();ctx.strokeStyle='#ffe88c';ctx.globalAlpha=Math.max(0,1-age/.75);ctx.lineWidth=3;ctx.beginPath();ctx.ellipse(target.x,target.y+12,28+age*15,12+age*8,0,0,Math.PI*2);ctx.stroke();ctx.font='bold 13px sans-serif';ctx.fillStyle='#ffe88c';ctx.fillText('✦ BUFF',target.x-24,target.y-65-age*20);ctx.restore();continue;}
       const type = e.type ?? 0;
       const target = this.positions.get(e.target);
       const tx = target?.x ?? e.tx, ty = target?.y ?? e.ty;
@@ -306,4 +306,15 @@ export function advanceWalk(previous,c,clock,status,verticalScale=1){
   state.moving=clock-state.lastMoved<.12&&(distance>.01||hasOrder);
   state.frame=Math.floor(state.distance/8)%8;
   return state;
+}
+
+// Name baseline is y+32. Badge rows begin below the name, with unscaled readable text.
+export function drawBlessingBadges(ctx,c,time,verticalScale=1,frame,clock=0){
+ const buffs=Object.entries(c.supportBuffs||{}).filter(([,b])=>b.until>time);if(!buffs.length)return;
+ ctx.save();ctx.strokeStyle=buffs.some(([k])=>k==='damage')?'#ffe48b':'#89edff';ctx.lineWidth=2;ctx.globalAlpha=.65+.15*Math.sin(clock*3);ctx.beginPath();ctx.ellipse(c.x,c.y+12,26,11,0,0,Math.PI*2);ctx.stroke();ctx.restore();
+ ctx.save();ctx.translate(c.x,c.y+32);ctx.scale(1,1/verticalScale);ctx.textAlign='center';ctx.textBaseline='middle';ctx.font='bold 9px sans-serif';
+ buffs.forEach(([kind,b],i)=>{const y=8+i*21,color=kind==='damage'?'#ffe7a0':'#9bf2ff';
+ if(frame?.complete&&frame.naturalWidth){ctx.save();if(kind==='speed')ctx.filter='hue-rotate(145deg)';ctx.drawImage(frame,frame.naturalWidth*.025,frame.naturalHeight*.26,frame.naturalWidth*.95,frame.naturalHeight*.42,-57,y,114,21);ctx.restore();}else{ctx.fillStyle='#071729';ctx.fillRect(-54,y+2,108,17);ctx.strokeStyle=color;ctx.strokeRect(-54,y+2,108,17);}
+ ctx.strokeStyle='#06101f';ctx.lineWidth=2.5;const label=(kind==='damage'?'피해':'공속')+' +'+Math.round(b.amount*100)+'% · '+Math.ceil(b.until-time)+'초';ctx.strokeText(label,5,y+11);ctx.fillStyle=color;ctx.fillText(label,5,y+11);
+ });ctx.restore();
 }

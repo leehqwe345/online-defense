@@ -23,10 +23,10 @@ export function formationPosition(index) {
 
 export function controlAction(game, player, request) {
   if (request.type === 'autoApproach') {
-    const champion = player.champions.find(c => c.id === request.id);
-    if (!champion || typeof request.enabled !== 'boolean') return '챔피언을 선택하세요.';
-    champion.autoApproach = request.enabled;
-    delete champion.approach;
+    const ids=Array.isArray(request.ids)?request.ids:[request.id];
+    const champions=player.champions.filter(c=>ids.includes(c.id));
+    if (!champions.length || typeof request.enabled !== 'boolean') return '챔피언을 선택하세요.';
+    for(const champion of champions){champion.autoApproach=request.enabled;delete champion.approach;delete champion.destination;champion.combatState='waiting';}
     return null;
   }
   if (request.type === 'pause') {
