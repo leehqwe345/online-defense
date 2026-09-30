@@ -1,7 +1,11 @@
 import {openAccountStore,AccountError,normalizedNickname} from './account-store.mjs';
 import {loadEnvFile} from 'node:process';
 
-try{loadEnvFile(new URL('./.env',import.meta.url));}catch(error){if(error.code!=='ENOENT')throw error;}
+try{
+  loadEnvFile(new URL('./.env',import.meta.url));
+}catch(error){
+  if(error.code!=='ENOENT')throw error;
+}
 
 import {gameForPlayer} from './game-view.js';
 import {stepGame} from './gameplay.js';
@@ -13,7 +17,9 @@ import {createGame,action,tick,advanceStartCountdown,CHAMPIONS} from './engine.j
 const port=Number(process.env.PORT)||3000;
 const clientId=process.env.GOOGLE_CLIENT_ID||'';
 
-const sessions=new Map(),rooms=new Map();
+const sessions=new Map();
+const rooms=new Map();
+
 const accountStore=await openAccountStore();
 const pendingResults=new Set();
 
@@ -27,13 +33,15 @@ const json=(res,status,data)=>{
   res.end(JSON.stringify(data));
 };
 
-let keys=[],keyUntil=0;
+let keys=[];
+let keyUntil=0;
 
 async function verifyGoogle(token){
   const parts=String(token).split('.');
 
-  if(parts.length!==3)
+  if(parts.length!==3){
     throw Error('잘못된 로그인 응답');
+  }
 
   const header=JSON.parse(
     Buffer.from(parts[0],'base64url')
@@ -43,29 +51,36 @@ async function verifyGoogle(token){
     Buffer.from(parts[1],'base64url')
   );
 
-  if(header.alg!=='RS256')
+  if(header.alg!=='RS256'){
     throw Error('지원하지 않는 서명');
+  }
 
   if(Date.now()>keyUntil){
     const r=await fetch(
       'https://www.googleapis.com/oauth2/v3/certs'
     );
 
-    if(!r.ok)
+    if(!r.ok){
       throw Error('Google 인증 서버 오류');
+    }
 
     keys=(await r.json()).keys;
     keyUntil=Date.now()+3600000;
   }
 
-  const key=keys.find(k=>k.kid===header.kid);
+  const key=keys.find(
+    k=>k.kid===header.kid
+  );
 
   if(
     !key ||
     !verify(
       'RSA-SHA256',
       Buffer.from(parts[0]+'.'+parts[1]),
-      createPublicKey({key,format:'jwk'}),
+      createPublicKey({
+        key,
+        format:'jwk'
+      }),
       Buffer.from(parts[2],'base64url')
     ) ||
     claims.aud!==clientId ||
@@ -138,7 +153,10 @@ function leave(user){
     r.cancelled=true;
   }
 
-  r.users=r.users.filter(u=>u.id!==user.id);
+  r.users=r.users.filter(
+    u=>u.id!==user.id
+  );
+
   user.room=null;
 
   if(!r.users.length){
@@ -151,920 +169,1266 @@ function leave(user){
       persistBattle(r);
     }
 
-    if(!r.game||r.cancelled||r.recorded)
+    if(
+      !r.game ||
+      r.cancelled ||
+      r.recorded
+    ){
       rooms.delete(r.id);
-
+    }
   }else{
     send(r);
   }
 }
 
-const server=http.createServer(async(req,res)=>{
-  try{
-    const url=new URL(req.url,'http://localhost');
+const server=http.createServer(
+  async(req,res)=>{
+    try{
+      const url=new URL(
+        req.url,
+        'http://localhost'
+      );
 
-    if(req.method==='POST'){
-      const origin=req.headers.origin;
+      if(req.method==='POST'){
+        const origin=req.headers.origin;
 
-      const forwardedProto=String(
-        req.headers['x-forwarded-proto']||''
-      ).split(',')[0].trim();
+        const forwardedProto=String(
+          req.headers['x-forwarded-proto']||''
+        ).split(',')[0].trim();
 
-      const expectedOrigin=
-        process.env.PUBLIC_ORIGIN ||
-        `${forwardedProto||'http'}://${req.headers.host}`;
+        const expectedOrigin=
+          process.env.PUBLIC_ORIGIN ||
+          `${forwardedProto||'http'}://${req.headers.host}`;
 
-      if(origin&&origin!==expectedOrigin){
-        return json(
-          res,
-          403,
-          {error:'다른 출처의 요청은 허용되지 않습니다.'}
-        );
-      }
-    }
-
-    let token=req.headers.cookie
-      ?.match(/(?:^|; )session=([a-f0-9]+)/)?.[1];
-
-    let user=sessions.get(token);
-
-    if(user&&Date.now()-user.seen>86400000){
-      sessions.delete(token);
-      user=null;
-    }
-
-    if(user)
-      user.seen=Date.now();
-
-    let body={};
-
-    if(req.method==='POST'){
-      let chunks='',size=0;
-
-      for await(const chunk of req){
-        size+=chunk.length;
-
-        if(size>16000){
+        if(origin&&origin!==expectedOrigin){
           return json(
             res,
-            413,
-            {error:'요청이 너무 큽니다.'}
+            403,
+            {
+              error:
+                '다른 출처의 요청은 허용되지 않습니다.'
+            }
+          );
+        }
+      }
+
+      let token=
+        req.headers.cookie
+          ?.match(
+            /(?:^|; )session=([a-f0-9]+)/
+          )?.[1];
+
+      let user=sessions.get(token);
+
+      if(
+        user &&
+        Date.now()-user.seen>86400000
+      ){
+        sessions.delete(token);
+        user=null;
+      }
+
+      if(user){
+        user.seen=Date.now();
+      }
+
+      let body={};
+
+      if(req.method==='POST'){
+        let chunks='';
+        let size=0;
+
+        for await(const chunk of req){
+          size+=chunk.length;
+
+          if(size>16000){
+            return json(
+              res,
+              413,
+              {
+                error:
+                  '요청이 너무 큽니다.'
+              }
+            );
+          }
+
+          chunks+=chunk;
+        }
+
+        body=JSON.parse(
+          chunks||'{}'
+        );
+      }
+
+      if(url.pathname==='/api/config'){
+        return json(
+          res,
+          200,
+          {clientId}
+        );
+      }
+
+      if(
+        url.pathname==='/api/login' &&
+        req.method==='POST'
+      ){
+        if(
+          typeof body.credential!=='string' ||
+          !body.credential.trim()
+        ){
+          return json(
+            res,
+            401,
+            {
+              error:
+                'Google 계정으로 로그인하세요. 게스트 로그인은 지원하지 않습니다.'
+            }
           );
         }
 
-        chunks+=chunk;
+        if(sessions.size>5000){
+          return json(
+            res,
+            503,
+            {
+              error:
+                '서버가 혼잡합니다.'
+            }
+          );
+        }
+
+        let uid=id();
+        let google=false;
+
+        if(body.credential){
+          if(!clientId){
+            return json(
+              res,
+              503,
+              {
+                error:
+                  'Google 클라이언트 ID가 설정되지 않았습니다.'
+              }
+            );
+          }
+
+          const c=
+            await verifyGoogle(
+              body.credential
+            );
+
+          uid='g_'+c.sub;
+          google=true;
+        }
+
+        const profile=
+          await accountStore.ensureProfile(
+            uid
+          );
+
+        if(user){
+          leave(user);
+        }
+
+        for(const [k,s] of sessions){
+          if(s.id===uid){
+            leave(s);
+            sessions.delete(k);
+          }
+        }
+
+        token=id();
+
+        user={
+          id:uid,
+          name:
+            profile.nickname ||
+            '수호자',
+
+          needsNickname:
+            !profile.nickname,
+
+          google,
+
+          lobbyCard:
+            profile.lobbyCard??0,
+
+          seen:Date.now(),
+          room:null
+        };
+
+        sessions.set(
+          token,
+          user
+        );
+
+        res.setHeader(
+          'Set-Cookie',
+          `session=${token}; HttpOnly; SameSite=Strict; Path=/; Max-Age=86400${
+            process.env.PUBLIC_ORIGIN
+              ?.startsWith('https:')
+              ?'; Secure'
+              :''
+          }`
+        );
+
+        return json(
+          res,
+          200,
+          {
+            user:{
+              id:user.id,
+              name:user.name,
+              needsNickname:
+                user.needsNickname,
+              google
+            }
+          }
+        );
       }
 
-      body=JSON.parse(chunks||'{}');
-    }
+      if(url.pathname==='/api/me'){
+        return json(
+          res,
+          200,
+          {
+            user:user
+              ?{
+                  id:user.id,
+                  name:user.name,
+                  needsNickname:
+                    user.needsNickname,
+                  google:user.google
+                }
+              :null,
 
-    if(url.pathname==='/api/config'){
-      return json(res,200,{clientId});
-    }
+            room:
+              user?.room &&
+              rooms.has(user.room)
+                ?user.room
+                :null
+          }
+        );
+      }
 
-    if(
-      url.pathname==='/api/login' &&
-      req.method==='POST'
-    ){
       if(
-        typeof body.credential!=='string' ||
-        !body.credential.trim()
+        url.pathname==='/api/rankings'
+      ){
+        return json(
+          res,
+          200,
+          (
+            await accountStore.rankings()
+          ).slice(0,50)
+        );
+      }
+
+      if(
+        url.pathname.startsWith('/api/') &&
+        (!user||!user.google)
       ){
         return json(
           res,
           401,
           {
             error:
-              'Google 계정으로 로그인하세요. 게스트 로그인은 지원하지 않습니다.'
+              '먼저 로그인하세요.'
           }
         );
       }
 
-      if(sessions.size>5000){
-        return json(
-          res,
-          503,
-          {error:'서버가 혼잡합니다.'}
-        );
-      }
+      if(
+        [
+          '/api/nickname-check',
+          '/api/nickname'
+        ].includes(url.pathname) &&
+        req.method==='POST'
+      ){
+        const name=
+          normalizedNickname(
+            body.name
+          );
 
-      let uid=id();
-      let google=false;
-
-      if(body.credential){
-        if(!clientId){
+        if(
+          url.pathname===
+          '/api/nickname-check'
+        ){
           return json(
             res,
-            503,
+            200,
             {
-              error:
-                'Google 클라이언트 ID가 설정되지 않았습니다.'
+              available:
+                await accountStore
+                  .nicknameAvailable(
+                    user.id,
+                    name
+                  )
             }
           );
         }
 
-        const c=await verifyGoogle(body.credential);
+        const profile=
+          await accountStore.setNickname(
+            user.id,
+            name
+          );
 
-        uid='g_'+c.sub;
-        google=true;
-      }
+        user.name=
+          profile.nickname;
 
-      const profile=
-        await accountStore.ensureProfile(uid);
+        user.needsNickname=false;
 
-      if(user)
-        leave(user);
-
-      for(const [k,s] of sessions){
-        if(s.id===uid){
-          leave(s);
-          sessions.delete(k);
-        }
-      }
-
-      token=id();
-
-      user={
-        id:uid,
-        name:profile.nickname||'수호자',
-        needsNickname:!profile.nickname,
-        google,
-        lobbyCard:profile.lobbyCard??0,
-        seen:Date.now(),
-        room:null
-      };
-
-      sessions.set(token,user);
-
-      res.setHeader(
-        'Set-Cookie',
-        `session=${token}; HttpOnly; SameSite=Strict; Path=/; Max-Age=86400${
-          process.env.PUBLIC_ORIGIN?.startsWith('https:')
-            ?'; Secure'
-            :''
-        }`
-      );
-
-      return json(
-        res,
-        200,
-        {
-          user:{
-            id:user.id,
-            name:user.name,
-            needsNickname:user.needsNickname,
-            google
-          }
-        }
-      );
-    }
-
-    if(url.pathname==='/api/me'){
-      return json(
-        res,
-        200,
-        {
-          user:user
-            ?{
-                id:user.id,
-                name:user.name,
-                needsNickname:user.needsNickname,
-                google:user.google
-              }
-            :null,
-
-          room:
-            user?.room&&rooms.has(user.room)
-              ?user.room
-              :null
-        }
-      );
-    }
-
-    if(url.pathname==='/api/rankings'){
-      return json(
-        res,
-        200,
-        (await accountStore.rankings()).slice(0,50)
-      );
-    }
-
-    if(
-      url.pathname.startsWith('/api/') &&
-      (!user||!user.google)
-    ){
-      return json(
-        res,
-        401,
-        {error:'먼저 로그인하세요.'}
-      );
-    }
-
-    if(
-      ['/api/nickname-check','/api/nickname']
-        .includes(url.pathname) &&
-      req.method==='POST'
-    ){
-      const name=normalizedNickname(body.name);
-
-      if(url.pathname==='/api/nickname-check'){
         return json(
           res,
           200,
           {
-            available:
-              await accountStore.nicknameAvailable(
-                user.id,
-                name
-              )
+            user:{
+              id:user.id,
+              name:user.name,
+              google:true,
+              needsNickname:false
+            }
           }
         );
       }
-
-      const profile=
-        await accountStore.setNickname(
-          user.id,
-          name
-        );
-
-      user.name=profile.nickname;
-      user.needsNickname=false;
-
-      return json(
-        res,
-        200,
-        {
-          user:{
-            id:user.id,
-            name:user.name,
-            google:true,
-            needsNickname:false
-          }
-        }
-      );
-    }
-
-    if(url.pathname==='/api/account-history'){
-      return json(
-        res,
-        200,
-        await accountStore.history(user.id)
-      );
-    }
-
-    if(
-      user?.needsNickname &&
-      ['/api/rooms','/api/join','/api/action']
-        .includes(url.pathname) &&
-      req.method==='POST'
-    ){
-      return json(
-        res,
-        403,
-        {error:'닉네임을 먼저 생성하세요.'}
-      );
-    }
-
-    if(
-      url.pathname==='/api/rooms' &&
-      req.method==='GET'
-    ){
-      return json(
-        res,
-        200,
-        [...rooms.values()]
-          .filter(
-            r=>r.options.mode!=='single'
-          )
-          .map(summary)
-      );
-    }
-
-    if(
-      url.pathname==='/api/rooms' &&
-      req.method==='POST'
-    ){
-      if(rooms.size>=100){
-        return json(
-          res,
-          503,
-          {error:'방이 가득 찼습니다.'}
-        );
-      }
-
-      leave(user);
-
-      const mode=
-        ['single','coop','versus']
-          .includes(body.mode)
-          ?body.mode
-          :'single';
-
-      const r={
-        id:id().slice(0,8),
-        battleId:id(),
-        name:`${user.name}의 방`,
-
-        capacity:
-          mode==='single'
-            ?1
-            :[2,3,4].includes(body.capacity)
-              ?body.capacity
-              :2,
-
-        options:{
-          mode,
-          random:!!body.random,
-          hard:Math.max(
-            0,
-            Math.min(
-              5,
-              Math.floor(Number(body.hard)||0)
-            )
-          )
-        },
-
-        users:[user],
-        streams:new Map(),
-        game:null,
-        created:Date.now()
-      };
-
-      if(mode==='single'){
-        r.game=createGame(
-          r.users,
-          r.options
-        );
-      }
-
-      rooms.set(r.id,r);
-      user.room=r.id;
-
-      return json(
-        res,
-        200,
-        summary(r)
-      );
-    }
-
-    if(
-      url.pathname==='/api/join' &&
-      req.method==='POST'
-    ){
-      const r=rooms.get(body.id);
 
       if(
-        !r ||
-        r.game ||
-        r.users.length>=r.capacity
+        url.pathname===
+        '/api/account-history'
       ){
         return json(
           res,
-          400,
-          {error:'입장할 수 없는 방입니다.'}
+          200,
+          await accountStore.history(
+            user.id
+          )
         );
       }
 
-      leave(user);
-
-      r.users.push(user);
-      user.room=r.id;
-
-      send(r);
-
-      return json(
-        res,
-        200,
-        summary(r)
-      );
-    }
-
-    if(
-      url.pathname==='/api/lobby-settings' &&
-      req.method==='POST'
-    ){
-      const r=rooms.get(user.room);
-
       if(
-        !r ||
-        r.game ||
-        r.users[0].id!==user.id
+        user?.needsNickname &&
+        [
+          '/api/rooms',
+          '/api/join',
+          '/api/action'
+        ].includes(url.pathname) &&
+        req.method==='POST'
       ){
         return json(
           res,
           403,
           {
             error:
-              '대기 중인 방의 방장만 설정할 수 있습니다.'
+              '닉네임을 먼저 생성하세요.'
           }
         );
       }
 
       if(
-        (
-          body.mode!==undefined &&
-          !['coop','versus']
-            .includes(body.mode)
-        ) ||
-        (
-          body.capacity!==undefined &&
-          (
-            ![2,3,4].includes(body.capacity) ||
-            body.capacity<r.users.length
-          )
-        ) ||
-        (
-          body.random!==undefined &&
-          typeof body.random!=='boolean'
-        ) ||
-        (
-          body.hard!==undefined &&
-          (
-            !Number.isInteger(body.hard) ||
-            body.hard<0 ||
-            body.hard>5
-          )
-        )
+        url.pathname==='/api/rooms' &&
+        req.method==='GET'
       ){
         return json(
           res,
-          400,
-          {
-            error:
-              '현재 참가 인원과 전투 설정을 확인하세요.'
-          }
-        );
-      }
-
-      if(body.mode!==undefined)
-        r.options.mode=body.mode;
-
-      if(body.capacity!==undefined)
-        r.capacity=body.capacity;
-
-      if(body.random!==undefined)
-        r.options.random=body.random;
-
-      if(body.hard!==undefined)
-        r.options.hard=body.hard;
-
-      send(r);
-
-      return json(
-        res,
-        200,
-        summary(r)
-      );
-    }
-
-    if(
-      url.pathname==='/api/lobby-card' &&
-      req.method==='POST'
-    ){
-      const r=rooms.get(user.room);
-
-      if(!r||r.game){
-        return json(
-          res,
-          400,
-          {
-            error:
-              '대기실에서만 변경할 수 있습니다.'
-          }
+          200,
+          [...rooms.values()]
+            .filter(
+              r=>
+                r.options.mode!==
+                'single'
+            )
+            .map(summary)
         );
       }
 
       if(
-        !Number.isInteger(body.card) ||
-        body.card<0 ||
-        body.card>=CHAMPIONS.length
+        url.pathname==='/api/rooms' &&
+        req.method==='POST'
       ){
-        return json(
-          res,
-          400,
-          {
-            error:
-              '올바른 캐릭터 카드를 선택하세요.'
-          }
-        );
-      }
-
-      await accountStore.setCard(
-        user.id,
-        body.card
-      );
-
-      user.lobbyCard=body.card;
-
-      send(r);
-
-      return json(
-        res,
-        200,
-        {card:body.card}
-      );
-    }
-
-    if(
-      url.pathname==='/api/lobby-chat' &&
-      req.method==='POST'
-    ){
-      const r=rooms.get(user.room);
-
-      if(!r||r.game){
-        return json(
-          res,
-          400,
-          {
-            error:
-              '대기실에서만 대화할 수 있습니다.'
-          }
-        );
-      }
-
-      const text=
-        typeof body.text==='string'
-          ?body.text.trim()
-          :'';
-
-      if(!text||text.length>200){
-        return json(
-          res,
-          400,
-          {
-            error:
-              '메시지는 1~200자로 입력하세요.'
-          }
-        );
-      }
-
-      if(
-        Date.now()-(user.lastChatAt||0)<700
-      ){
-        return json(
-          res,
-          429,
-          {error:'잠시 후 전송하세요.'}
-        );
-      }
-
-      user.lastChatAt=Date.now();
-
-      r.messages=[
-        ...(r.messages||[]),
-        {
-          name:user.name,
-          text,
-          at:Date.now()
+        if(rooms.size>=100){
+          return json(
+            res,
+            503,
+            {
+              error:
+                '방이 가득 찼습니다.'
+            }
+          );
         }
-      ].slice(-50);
 
-      send(r);
+        leave(user);
 
-      return json(res,200,{});
-    }
+        const mode=
+          [
+            'single',
+            'coop',
+            'versus'
+          ].includes(body.mode)
+            ?body.mode
+            :'single';
 
-    if(
-      url.pathname==='/api/leave' &&
-      req.method==='POST'
-    ){
-      leave(user);
-      return json(res,200,{});
-    }
+        const r={
+          id:id().slice(0,8),
 
-    if(url.pathname==='/api/events'){
-      const r=rooms.get(user.room);
+          battleId:id(),
 
-      if(!r){
+          name:
+            `${user.name}의 방`,
+
+          capacity:
+            mode==='single'
+              ?1
+              :[2,3,4]
+                  .includes(
+                    body.capacity
+                  )
+                ?body.capacity
+                :2,
+
+          options:{
+            mode,
+
+            random:
+              !!body.random,
+
+            hard:
+              Math.max(
+                0,
+                Math.min(
+                  5,
+                  Math.floor(
+                    Number(
+                      body.hard
+                    )||0
+                  )
+                )
+              )
+          },
+
+          users:[user],
+
+          streams:
+            new Map(),
+
+          game:null,
+
+          created:
+            Date.now()
+        };
+
+        if(mode==='single'){
+          r.game=createGame(
+            r.users,
+            r.options
+          );
+        }
+
+        rooms.set(
+          r.id,
+          r
+        );
+
+        user.room=r.id;
+
         return json(
           res,
-          404,
-          {error:'방을 찾을 수 없습니다.'}
+          200,
+          summary(r)
         );
       }
-
-      res.writeHead(
-        200,
-        {
-          'Content-Type':'text/event-stream',
-          'Cache-Control':'no-cache',
-          'Connection':'keep-alive'
-        }
-      );
-
-      r.streams.get(user.id)?.end();
-
-      r.streams.set(
-        user.id,
-        res
-      );
-
-      res.write(
-        `data: ${JSON.stringify({
-          room:summary(r),
-          game:gameForPlayer(
-            r.game,
-            user.id
-          )
-        })}\n\n`
-      );
-
-      req.on(
-        'close',
-        ()=>{
-          if(
-            r.streams.get(user.id)===res
-          ){
-            r.streams.delete(user.id);
-          }
-        }
-      );
-
-      return;
-    }
-
-    if(
-      url.pathname==='/api/action' &&
-      req.method==='POST'
-    ){
-      const r=rooms.get(user.room);
-
-      if(!r){
-        return json(
-          res,
-          404,
-          {error:'방을 찾을 수 없습니다.'}
-        );
-      }
-
-      const now=Date.now();
 
       if(
-        !user.window ||
-        now-user.window>1000
+        url.pathname==='/api/join' &&
+        req.method==='POST'
       ){
-        user.window=now;
-        user.requests=0;
-      }
+        const r=
+          rooms.get(body.id);
 
-      if(++user.requests>45){
-        return json(
-          res,
-          429,
-          {error:'잠시 후 다시 시도하세요.'}
-        );
-      }
-
-      if(body.type==='launch'){
         if(
-          r.users[0].id!==user.id ||
-          r.users.length!==r.capacity ||
-          r.game
+          !r ||
+          r.game ||
+          r.users.length>=
+            r.capacity
         ){
           return json(
             res,
             400,
             {
               error:
-                '정원이 모두 입장한 뒤 방장이 시작할 수 있습니다.'
+                '입장할 수 없는 방입니다.'
             }
           );
         }
 
-        r.game=createGame(
-          r.users,
-          r.options
-        );
+        leave(user);
 
-      }else{
-        if(!r.game){
-          return json(
-            res,
-            400,
-            {error:'대기 중입니다.'}
-          );
-        }
+        r.users.push(user);
+        user.room=r.id;
+
+        send(r);
+
+        return json(
+          res,
+          200,
+          summary(r)
+        );
+      }
+
+      if(
+        url.pathname===
+          '/api/lobby-settings' &&
+        req.method==='POST'
+      ){
+        const r=
+          rooms.get(user.room);
 
         if(
-          ['start','prepareStart']
-            .includes(body.type) &&
-          r.users[0].id!==user.id
+          !r ||
+          r.game ||
+          r.users[0].id!==
+            user.id
         ){
           return json(
             res,
             403,
             {
               error:
-                '방장만 전투를 시작할 수 있습니다.'
+                '대기 중인 방의 방장만 설정할 수 있습니다.'
             }
           );
         }
 
-        const error=action(
-          r.game,
-          user.id,
-          body.type==='start'
-            ?{
-                ...body,
-                type:'prepareStart'
-              }
-            :body
-        );
-
-        if(error){
+        if(
+          (
+            body.mode!==undefined &&
+            ![
+              'coop',
+              'versus'
+            ].includes(body.mode)
+          ) ||
+          (
+            body.capacity!==undefined &&
+            (
+              ![2,3,4]
+                .includes(
+                  body.capacity
+                ) ||
+              body.capacity<
+                r.users.length
+            )
+          ) ||
+          (
+            body.random!==undefined &&
+            typeof body.random!==
+              'boolean'
+          ) ||
+          (
+            body.hard!==undefined &&
+            (
+              !Number.isInteger(
+                body.hard
+              ) ||
+              body.hard<0 ||
+              body.hard>5
+            )
+          )
+        ){
           return json(
             res,
             400,
-            {error}
+            {
+              error:
+                '현재 참가 인원과 전투 설정을 확인하세요.'
+            }
           );
         }
+
+        if(
+          body.mode!==undefined
+        ){
+          r.options.mode=
+            body.mode;
+        }
+
+        if(
+          body.capacity!==undefined
+        ){
+          r.capacity=
+            body.capacity;
+        }
+
+        if(
+          body.random!==undefined
+        ){
+          r.options.random=
+            body.random;
+        }
+
+        if(
+          body.hard!==undefined
+        ){
+          r.options.hard=
+            body.hard;
+        }
+
+        send(r);
+
+        return json(
+          res,
+          200,
+          summary(r)
+        );
       }
 
-      send(r);
+      if(
+        url.pathname===
+          '/api/lobby-card' &&
+        req.method==='POST'
+      ){
+        const r=
+          rooms.get(user.room);
 
-      return json(res,200,{});
-    }
+        if(!r||r.game){
+          return json(
+            res,
+            400,
+            {
+              error:
+                '대기실에서만 변경할 수 있습니다.'
+            }
+          );
+        }
 
-    const staticFiles={
-      '/auth.css':'auth.css',
-      '/assets/auth-castle-v1.png':'assets/auth-castle-v1.png',
-      '/assets/boss-spell-frames-v2.png':'assets/boss-spell-frames-v2.png',
-      '/assets/projectiles-v1.png':'assets/projectiles-v1.png',
-      '/assets/blessing-frame-v1.png':'assets/blessing-frame-v1.png',
-      '/synergies.js':'synergies.js',
-      '/shop.css':'shop.css',
-      '/assets/shop-banner-v1.png':'assets/shop-banner-v1.png',
-      '/lobby.js':'lobby.js',
-      '/lobby.css':'lobby.css',
-      '/assets/lobby-courtyard-v1.png':'assets/lobby-courtyard-v1.png',
+        if(
+          !Number.isInteger(
+            body.card
+          ) ||
+          body.card<0 ||
+          body.card>=
+            CHAMPIONS.length
+        ){
+          return json(
+            res,
+            400,
+            {
+              error:
+                '올바른 캐릭터 카드를 선택하세요.'
+            }
+          );
+        }
 
-      ...Object.fromEntries(
-        Array.from(
-          {length:7},
-          (_,i)=>[
-            '/assets/monster-walk-'+i+'-v1.png',
-            'assets/monster-walk-'+i+'-v1.png'
-          ]
-        )
-      ),
+        await accountStore
+          .setCard(
+            user.id,
+            body.card
+          );
 
-      '/game.html':'game.html',
-      '/display.js':'display.js',
-      '/battle-premium.css':'battle-premium.css',
-      '/assets/battle-ruins-v1.png':'assets/battle-ruins-v1.png',
-      '/battle-announcements.js':'battle-announcements.js',
-      '/talents.js':'talents.js',
-      '/champion-skills.js':'champion-skills.js',
-      '/champion-skill-visuals.js':'champion-skill-visuals.js',
-      '/assets/champion-skills-v1.png':'assets/champion-skills-v1.png',
-      '/boss-skills.js':'boss-skills.js',
-      '/assets/boss-skills-v1.png':'assets/boss-skills-v1.png',
-      '/assets/equipment-set-expansion-v1.png':'assets/equipment-set-expansion-v1.png',
+        user.lobbyCard=
+          body.card;
 
-      ...Object.fromEntries(
-        Array.from(
-          {length:5},
-          (_,i)=>i+10
-        ).flatMap(
-          i=>['attack','walk'].map(
-            kind=>[
-              `/assets/champion-${i}-${kind}-v1.png`,
-              `assets/champion-${i}-${kind}-v1.png`
+        send(r);
+
+        return json(
+          res,
+          200,
+          {
+            card:
+              body.card
+          }
+        );
+      }
+
+      if(
+        url.pathname===
+          '/api/lobby-chat' &&
+        req.method==='POST'
+      ){
+        const r=
+          rooms.get(user.room);
+
+        if(!r||r.game){
+          return json(
+            res,
+            400,
+            {
+              error:
+                '대기실에서만 대화할 수 있습니다.'
+            }
+          );
+        }
+
+        const text=
+          typeof body.text===
+            'string'
+            ?body.text.trim()
+            :'';
+
+        if(
+          !text ||
+          text.length>200
+        ){
+          return json(
+            res,
+            400,
+            {
+              error:
+                '메시지는 1~200자로 입력하세요.'
+            }
+          );
+        }
+
+        if(
+          Date.now()-
+            (user.lastChatAt||0)<
+          700
+        ){
+          return json(
+            res,
+            429,
+            {
+              error:
+                '잠시 후 전송하세요.'
+            }
+          );
+        }
+
+        user.lastChatAt=
+          Date.now();
+
+        r.messages=[
+          ...(r.messages||[]),
+          {
+            name:user.name,
+            text,
+            at:Date.now()
+          }
+        ].slice(-50);
+
+        send(r);
+
+        return json(
+          res,
+          200,
+          {}
+        );
+      }
+
+      if(
+        url.pathname==='/api/leave' &&
+        req.method==='POST'
+      ){
+        leave(user);
+
+        return json(
+          res,
+          200,
+          {}
+        );
+      }
+
+      if(
+        url.pathname==='/api/events'
+      ){
+        const r=
+          rooms.get(user.room);
+
+        if(!r){
+          return json(
+            res,
+            404,
+            {
+              error:
+                '방을 찾을 수 없습니다.'
+            }
+          );
+        }
+
+        res.writeHead(
+          200,
+          {
+            'Content-Type':
+              'text/event-stream',
+
+            'Cache-Control':
+              'no-cache',
+
+            'Connection':
+              'keep-alive'
+          }
+        );
+
+        r.streams
+          .get(user.id)
+          ?.end();
+
+        r.streams.set(
+          user.id,
+          res
+        );
+
+        res.write(
+          `data: ${JSON.stringify({
+            room:summary(r),
+
+            game:
+              gameForPlayer(
+                r.game,
+                user.id
+              )
+          })}\n\n`
+        );
+
+        req.on(
+          'close',
+          ()=>{
+            if(
+              r.streams
+                .get(user.id)===
+              res
+            ){
+              r.streams.delete(
+                user.id
+              );
+            }
+          }
+        );
+
+        return;
+      }
+
+      if(
+        url.pathname==='/api/action' &&
+        req.method==='POST'
+      ){
+        const r=
+          rooms.get(user.room);
+
+        if(!r){
+          return json(
+            res,
+            404,
+            {
+              error:
+                '방을 찾을 수 없습니다.'
+            }
+          );
+        }
+
+        const now=Date.now();
+
+        if(
+          !user.window ||
+          now-user.window>1000
+        ){
+          user.window=now;
+          user.requests=0;
+        }
+
+        if(++user.requests>45){
+          return json(
+            res,
+            429,
+            {
+              error:
+                '잠시 후 다시 시도하세요.'
+            }
+          );
+        }
+
+        if(
+          body.type==='launch'
+        ){
+          if(
+            r.users[0].id!==
+              user.id ||
+            r.users.length!==
+              r.capacity ||
+            r.game
+          ){
+            return json(
+              res,
+              400,
+              {
+                error:
+                  '정원이 모두 입장한 뒤 방장이 시작할 수 있습니다.'
+              }
+            );
+          }
+
+          r.game=createGame(
+            r.users,
+            r.options
+          );
+        }else{
+          if(!r.game){
+            return json(
+              res,
+              400,
+              {
+                error:
+                  '대기 중입니다.'
+              }
+            );
+          }
+
+          if(
+            [
+              'start',
+              'prepareStart'
+            ].includes(body.type) &&
+            r.users[0].id!==
+              user.id
+          ){
+            return json(
+              res,
+              403,
+              {
+                error:
+                  '방장만 전투를 시작할 수 있습니다.'
+              }
+            );
+          }
+
+          const error=action(
+            r.game,
+            user.id,
+            body.type==='start'
+              ?{
+                  ...body,
+                  type:
+                    'prepareStart'
+                }
+              :body
+          );
+
+          if(error){
+            return json(
+              res,
+              400,
+              {error}
+            );
+          }
+        }
+
+        send(r);
+
+        return json(
+          res,
+          200,
+          {}
+        );
+      }
+
+      const staticFiles={
+        '/auth.css':
+          'auth.css',
+
+        '/assets/auth-castle-v1.png':
+          'assets/auth-castle-v1.png',
+
+        '/assets/boss-spell-frames-v2.png':
+          'assets/boss-spell-frames-v2.png',
+
+        '/assets/projectiles-v1.png':
+          'assets/projectiles-v1.png',
+
+        '/assets/blessing-frame-v1.png':
+          'assets/blessing-frame-v1.png',
+
+        '/synergies.js':
+          'synergies.js',
+
+        '/shop.css':
+          'shop.css',
+
+        '/assets/shop-banner-v1.png':
+          'assets/shop-banner-v1.png',
+
+        '/lobby.js':
+          'lobby.js',
+
+        '/lobby.css':
+          'lobby.css',
+
+        '/assets/lobby-courtyard-v1.png':
+          'assets/lobby-courtyard-v1.png',
+
+        ...Object.fromEntries(
+          Array.from(
+            {length:7},
+            (_,i)=>[
+              '/assets/monster-walk-'+i+'-v1.png',
+              'assets/monster-walk-'+i+'-v1.png'
             ]
           )
-        )
-      ),
+        ),
 
-      '/monsters.js':'monsters.js',
+        '/game.html':
+          'game.html',
 
-      ...Object.fromEntries(
-        [0,1,2].map(
-          i=>[
-            `/assets/monsters-expansion-${i}-v1.png`,
-            `assets/monsters-expansion-${i}-v1.png`
-          ]
-        )
-      ),
+        '/display.js':
+          'display.js',
 
-      ...Object.fromEntries(
-        Array.from(
-          {length:10},
-          (_,i)=>[
-            `/assets/champion-${i}-walk-v1.png`,
-            `assets/champion-${i}-walk-v1.png`
-          ]
-        )
-      ),
+        '/battle-premium.css':
+          'battle-premium.css',
 
-      '/assets/champion-0-attack-v1.png':'assets/champion-0-attack-v1.png',
-      '/assets/champion-1-attack-v1.png':'assets/champion-1-attack-v1.png',
-      '/assets/champion-2-attack-v1.png':'assets/champion-2-attack-v1.png',
-      '/assets/champion-3-attack-v1.png':'assets/champion-3-attack-v1.png',
-      '/assets/champion-4-attack-v1.png':'assets/champion-4-attack-v1.png',
-      '/assets/champion-5-attack-v1.png':'assets/champion-5-attack-v1.png',
-      '/assets/champion-6-attack-v1.png':'assets/champion-6-attack-v1.png',
-      '/assets/champion-7-attack-v1.png':'assets/champion-7-attack-v1.png',
-      '/assets/champion-8-attack-v1.png':'assets/champion-8-attack-v1.png',
-      '/assets/champion-9-attack-v1.png':'assets/champion-9-attack-v1.png',
+        '/assets/battle-ruins-v1.png':
+          'assets/battle-ruins-v1.png',
 
-      '/assets/equipment-set-0-v2.png':'assets/equipment-set-0-v2.png',
-      '/assets/equipment-set-1-v2.png':'assets/equipment-set-1-v2.png',
-      '/assets/battle-terrains-v6.png':'assets/battle-terrains-v6.png',
-      '/assets/battle-road-v1.png':'assets/battle-road-v1.png',
-      '/command-ui.js':'command-ui.js',
-      '/command-ui.css':'command-ui.css',
-      '/assets/command-scenes-v1.png':'assets/command-scenes-v1.png',
-      '/assets/equipment-icons-v1.png':'assets/equipment-icons-v1.png',
+        '/battle-announcements.js':
+          'battle-announcements.js',
 
-      '/':'index.html',
-      '/app.js':'app.js',
-      '/engine.js':'engine.js',
-      '/gameplay.js':'gameplay.js',
-      '/battle-ui.js':'battle-ui.js',
-      '/renderer.js':'renderer.js',
-      '/art.js':'art.js',
-      '/maps.js':'maps.js',
-      '/assets/maps-v5.png':'assets/maps-v5.png',
-      '/monster-visuals.js':'monster-visuals.js',
-      '/assets/monsters-v4.png':'assets/monsters-v4.png',
-      '/assets/monster-reactions-v4.png':'assets/monster-reactions-v4.png',
-      '/assets/champions-v3.png':'assets/champions-v3.png',
-      '/assets/effects-v3.png':'assets/effects-v3.png',
-      '/style.css':'style.css'
-    };
+        '/talents.js':
+          'talents.js',
 
-    const file=staticFiles[url.pathname];
+        '/champion-skills.js':
+          'champion-skills.js',
 
-    if(!file){
-      return json(
-        res,
-        404,
-        {error:'페이지를 찾을 수 없습니다.'}
-      );
-    }
+        '/champion-skill-visuals.js':
+          'champion-skill-visuals.js',
 
-    const data=await readFile(
-      new URL(file,import.meta.url)
-    );
+        '/assets/champion-skills-v1.png':
+          'assets/champion-skills-v1.png',
 
-    res.writeHead(
-      200,
-      {
-        'Content-Type':
-          file.endsWith('.png')
-            ?'image/png'
-            :file.endsWith('.js')
-              ?'text/javascript'
-              :file.endsWith('.css')
-                ?'text/css'
-                :'text/html',
+        '/boss-skills.js':
+          'boss-skills.js',
 
-        'X-Content-Type-Options':'nosniff',
-        'Referrer-Policy':
-          'strict-origin-when-cross-origin'
+        '/assets/boss-skills-v1.png':
+          'assets/boss-skills-v1.png',
+
+        '/assets/equipment-set-expansion-v1.png':
+          'assets/equipment-set-expansion-v1.png',
+
+        ...Object.fromEntries(
+          Array.from(
+            {length:5},
+            (_,i)=>i+10
+          ).flatMap(
+            i=>
+              ['attack','walk']
+                .map(
+                  kind=>[
+                    `/assets/champion-${i}-${kind}-v1.png`,
+                    `assets/champion-${i}-${kind}-v1.png`
+                  ]
+                )
+          )
+        ),
+
+        '/monsters.js':
+          'monsters.js',
+
+        ...Object.fromEntries(
+          [0,1,2].map(
+            i=>[
+              `/assets/monsters-expansion-${i}-v1.png`,
+              `assets/monsters-expansion-${i}-v1.png`
+            ]
+          )
+        ),
+
+        ...Object.fromEntries(
+          Array.from(
+            {length:10},
+            (_,i)=>[
+              `/assets/champion-${i}-walk-v1.png`,
+              `assets/champion-${i}-walk-v1.png`
+            ]
+          )
+        ),
+
+        '/assets/champion-0-attack-v1.png':
+          'assets/champion-0-attack-v1.png',
+
+        '/assets/champion-1-attack-v1.png':
+          'assets/champion-1-attack-v1.png',
+
+        '/assets/champion-2-attack-v1.png':
+          'assets/champion-2-attack-v1.png',
+
+        '/assets/champion-3-attack-v1.png':
+          'assets/champion-3-attack-v1.png',
+
+        '/assets/champion-4-attack-v1.png':
+          'assets/champion-4-attack-v1.png',
+
+        '/assets/champion-5-attack-v1.png':
+          'assets/champion-5-attack-v1.png',
+
+        '/assets/champion-6-attack-v1.png':
+          'assets/champion-6-attack-v1.png',
+
+        '/assets/champion-7-attack-v1.png':
+          'assets/champion-7-attack-v1.png',
+
+        '/assets/champion-8-attack-v1.png':
+          'assets/champion-8-attack-v1.png',
+
+        '/assets/champion-9-attack-v1.png':
+          'assets/champion-9-attack-v1.png',
+
+        '/assets/equipment-set-0-v2.png':
+          'assets/equipment-set-0-v2.png',
+
+        '/assets/equipment-set-1-v2.png':
+          'assets/equipment-set-1-v2.png',
+
+        '/assets/battle-terrains-v6.png':
+          'assets/battle-terrains-v6.png',
+
+        '/assets/battle-road-v1.png':
+          'assets/battle-road-v1.png',
+
+        '/command-ui.js':
+          'command-ui.js',
+
+        '/command-ui.css':
+          'command-ui.css',
+
+        '/assets/command-scenes-v1.png':
+          'assets/command-scenes-v1.png',
+
+        '/assets/equipment-icons-v1.png':
+          'assets/equipment-icons-v1.png',
+
+        '/':
+          'index.html',
+
+        '/app.js':
+          'app.js',
+
+        '/engine.js':
+          'engine.js',
+
+        '/gameplay.js':
+          'gameplay.js',
+
+        '/battle-ui.js':
+          'battle-ui.js',
+
+        '/renderer.js':
+          'renderer.js',
+
+        '/art.js':
+          'art.js',
+
+        '/maps.js':
+          'maps.js',
+
+        '/assets/maps-v5.png':
+          'assets/maps-v5.png',
+
+        '/monster-visuals.js':
+          'monster-visuals.js',
+
+        '/assets/monsters-v4.png':
+          'assets/monsters-v4.png',
+
+        '/assets/monster-reactions-v4.png':
+          'assets/monster-reactions-v4.png',
+
+        '/assets/champions-v3.png':
+          'assets/champions-v3.png',
+
+        '/assets/effects-v3.png':
+          'assets/effects-v3.png',
+
+        '/style.css':
+          'style.css'
+      };
+
+      const file=
+        staticFiles[url.pathname];
+
+      if(!file){
+        return json(
+          res,
+          404,
+          {
+            error:
+              '페이지를 찾을 수 없습니다.'
+          }
+        );
       }
-    );
 
-    res.end(data);
+      const data=
+        await readFile(
+          new URL(
+            file,
+            import.meta.url
+          )
+        );
 
-  }catch(e){
-    if(e instanceof AccountError){
-      return json(
-        res,
-        e.status,
-        {error:e.message}
+      res.writeHead(
+        200,
+        {
+          'Content-Type':
+            file.endsWith('.png')
+              ?'image/png'
+              :file.endsWith('.js')
+                ?'text/javascript'
+                :file.endsWith('.css')
+                  ?'text/css'
+                  :'text/html',
+
+          'X-Content-Type-Options':
+            'nosniff',
+
+          'Referrer-Policy':
+            'strict-origin-when-cross-origin'
+        }
       );
-    }
 
-    if(e instanceof SyntaxError){
-      return json(
-        res,
-        400,
-        {error:'잘못된 요청 형식입니다.'}
-      );
-    }
+      res.end(data);
 
-    console.error(
-      'Request failed:',
-      e.code||e.name
-    );
-
-    json(
-      res,
-      503,
-      {
-        error:
-          '요청을 저장하거나 처리하지 못했습니다. 잠시 후 다시 시도하세요.'
+    }catch(e){
+      if(e instanceof AccountError){
+        return json(
+          res,
+          e.status,
+          {
+            error:
+              e.message
+          }
+        );
       }
-    );
+
+      if(e instanceof SyntaxError){
+        return json(
+          res,
+          400,
+          {
+            error:
+              '잘못된 요청 형식입니다.'
+          }
+        );
+      }
+
+      console.error(
+        'Request failed:',
+        e.code||e.name
+      );
+
+      json(
+        res,
+        503,
+        {
+          error:
+            '요청을 저장하거나 처리하지 못했습니다. 잠시 후 다시 시도하세요.'
+        }
+      );
+    }
   }
-});
+);
 
 const gameTimer=setInterval(
   ()=>{
     for(const r of rooms.values()){
       if(r.game){
-        if(r.game.status==='countdown'){
+        if(
+          r.game.status===
+          'countdown'
+        ){
           advanceStartCountdown(
             r.game,
             Math.max(
@@ -1073,7 +1437,8 @@ const gameTimer=setInterval(
               Math.max(
                 0,
                 (
-                  r.game.startCountdownEndsAt-
+                  r.game
+                    .startCountdownEndsAt-
                   Date.now()
                 )/1000
               )
@@ -1102,7 +1467,8 @@ const gameTimer=setInterval(
 
       if(
         !r.streams.size &&
-        Date.now()-r.created>3600000 &&
+        Date.now()-r.created>
+          3600000 &&
         (
           !r.game ||
           r.cancelled ||
@@ -1114,7 +1480,10 @@ const gameTimer=setInterval(
     }
 
     for(const [k,u] of sessions){
-      if(Date.now()-u.seen>86400000){
+      if(
+        Date.now()-u.seen>
+        86400000
+      ){
         leave(u);
         sessions.delete(k);
       }
@@ -1148,8 +1517,11 @@ function persistBattle(r){
         random:g.random,
         round:g.round,
         kills:p.kills,
-        seconds:Math.round(g.time),
-        date:new Date().toISOString()
+        seconds:
+          Math.round(g.time),
+        date:
+          new Date()
+            .toISOString()
       })
     );
 
@@ -1166,7 +1538,9 @@ function persistBattle(r){
       )
       .catch(
         ()=>{
-          r.retryAt=Date.now()+5000;
+          r.retryAt=
+            Date.now()+5000;
+
           console.error(
             'Battle result save failed; retry pending'
           );
@@ -1194,13 +1568,17 @@ async function shutdown(){
   clearInterval(gameTimer);
 
   for(const r of rooms.values()){
-    for(const res of r.streams.values()){
+    for(
+      const res
+      of r.streams.values()
+    ){
       res.end();
     }
   }
 
   await new Promise(
-    resolve=>server.close(resolve)
+    resolve=>
+      server.close(resolve)
   );
 
   for(const r of rooms.values()){
