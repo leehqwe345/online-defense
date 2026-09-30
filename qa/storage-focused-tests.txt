@@ -1,0 +1,16 @@
+✔ profile and match survive reopen; battle retry is idempotent (17.1358ms)
+✔ concurrent case-insensitive duplicate names and repeated registration are rejected (10.5596ms)
+✔ legacy migration preserves original files and only runs once (12.3188ms)
+✔ invalid legacy JSON blocks startup instead of silently discarding accounts (8.8273ms)
+✔ partial battle batch is rolled back on invalid row (8.6091ms)
+✔ SQLite live backup restores account data (14.6484ms)
+✔ Render never falls back to an ephemeral local database (0.173ms)
+✔ HTTP sessions, 2/3/4-player rooms, authority checks, SSE and reconnection (4540.1896ms)
+ℹ tests 8
+ℹ suites 0
+ℹ pass 8
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 4601.8868

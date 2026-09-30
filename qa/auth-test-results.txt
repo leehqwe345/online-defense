@@ -1,0 +1,168 @@
+✔ all damage champion types placed at center approach and attack in single, coop and versus (229.7806ms)
+✔ manual move orders take priority over automatic pursuit (1.1449ms)
+✔ hold position does not move, enabling approach resumes combat; other players cannot toggle it (4.6628ms)
+✔ resistant targets still trigger pursuit and receive reduced damage (5.0733ms)
+✔ approach continues during cooldown and pause freezes all combat movement (4.0465ms)
+✔ in-range champions keep their placement while firing (0.2224ms)
+✔ all 100 rounds map to ten distinct consecutive ten-round regions (1.44ms)
+✔ 3 2 1 START is real-time, no spawn or simulation before completion; repeated start cannot reset (2.2716ms)
+✔ versus round announcement distinguishes the clearing player from the opponent (2.9304ms)
+✔ wave clear, timed pressure and boss messages include accurate next round (0.2582ms)
+✔ blessing badges sit below name and stack while expired buffs disappear (1.537ms)
+✔ blessing support VFX supplies valid ellipse arguments and does not interrupt rendering (2.0815ms)
+✔ warnings begin three simulation seconds before casting and cancel on boss death/removal (1.0316ms)
+✔ five skills provide distinct warning images, names and descriptions (0.4265ms)
+✔ cast replaces warning, rotates next skill and pause freezes countdown (2.0875ms)
+✔ simultaneous bosses keep distinct casts, isolated to the current board (0.2567ms)
+✔ canvas warning uses generated atlas and restores transform; both champion debuffs show seconds (2.7437ms)
+✔ world boss uses quadrupled previous HP for 2 3 and 4 players (6.3812ms)
+✔ all boss skill animation frames remain within sheet (0.5191ms)
+✔ browser entry points and modules parse successfully (598.1661ms)
+✔ slow equipment strength and tier affect actual movement; strongest slow survives weaker hits (5.0052ms)
+✔ weaker poison cannot steal damage ownership from stronger poison (0.5844ms)
+✔ full bag rejects unequip and champion merge without losing equipment or champions (1.9401ms)
+✔ all fifteen skills cast with cooldown, art event and real damage or buffs (5.9349ms)
+✔ locked tiers, movement, fear, absent targets and cooldown do not spend skill (0.1878ms)
+✔ meteor delayed damage and bomb following preserve location, DPS and kill credit (1.0928ms)
+✔ legendary blessing cleanses two allies; stronger buff does not get overwritten (0.3342ms)
+✔ ice skill slows boss instead of full freeze; assassin refunds on kill (0.326ms)
+✔ engine auto casts after cooldown, pause freezes timers, skill kills reward the killer and count once (1.9119ms)
+✔ delayed skills on one versus board cannot damage other board (0.2512ms)
+✔ silence prevents champion skill casting before touching its targets or cooldown (1.2935ms)
+✔ legendary chain deals real damage to three extra enemies with one attack (2.8091ms)
+✔ split equipment chances cap at 100%, epic and legendary never stack (0.8626ms)
+✔ chain follows distinct adjacent enemies, respects probability and range (1.0064ms)
+✔ single and versus boss counts as ten, co-op retains one (0.6471ms)
+✔ versus first clear grants five gold once and does not pay opponent (1.1492ms)
+✔ boss fear lasts five seconds and new spells apply timed debuffs (0.4312ms)
+✔ world boss survives timed next wave and only expires at next boss round (1.0045ms)
+✔ resistances reduce damage without making physical or magic invulnerable (0.9105ms)
+✔ manual and auto movement never fire on a moving tick (3.579ms)
+✔ co-op allies on their own board cannot overlap after movement (53.5784ms)
+✔ boss spawns every fifth wave with sixty-fold health (1.0324ms)
+✔ eight boss skills cycle, fear blocks attacks and healing is capped (0.7853ms)
+✔ boss uses skills only at its 30-second cooldown (0.3409ms)
+✔ fixed logical display preserves 16:9 and centers without cropping across sizes (4.7574ms)
+✔ catalog has 15 unique champions, 60 items and normalized shop odds (4.2939ms)
+✔ 60 gold allows exactly two summons; actions cannot overspend or control another player (2.9163ms)
+✔ merge returns consumed equipment and raises exactly one tier (0.2746ms)
+✔ equip replacement and removal preserve all item identities (0.8283ms)
+✔ each wave spawns 30 and enemies circle without escaping (13.5114ms)
+✔ single advances immediately after wave clear (0.3664ms)
+✔ versus leader pushes next wave onto opponent existing enemies (0.4162ms)
+✔ co-op kills reward only the killer, bosses pay 30 and only killer gets kill count (0.584ms)
+✔ 100 monsters cause defeat; round 100 clear ends game (0.6257ms)
+✔ broad resistance and penetration reduce rather than prevent damage (0.4282ms)
+✔ hard stages increase HP and do not produce total physical and magic immunity (1.0694ms)
+✔ equipment changes all eight core stats through named modifiers (0.8011ms)
+✔ four equipment slots each contain 15 items; original IDs retain their slot and effect (0.8252ms)
+✔ all 20 new items apply both bonuses at every tier, with matching descriptions and art (4.8161ms)
+✔ new equipment is drawable, mergeable, equippable in its own slot and removable (2.8777ms)
+✔ all modes and difficulties run fixed 2x regardless of speed requests or stale speed fields (13.8182ms)
+✔ 60-second pressure adds a wave without removing survivors in single and co-op (46.2499ms)
+✔ clearing early resets countdown for the next wave (0.7172ms)
+✔ no defense reaches the 100-monster loss condition at round four (59.9207ms)
+✔ versus does not spawn from timer, and 100 is the last wave (23.4746ms)
+✔ pause freezes combat and countdown; fixed 2x uses simulation substeps (1.5225ms)
+✔ auto formation stays inside map and affects only requesting player (0.8445ms)
+✔ target priority excludes immunity and obeys boss or health priority (0.2742ms)
+✔ late-game HP curve is bounded, monotonically increasing and scales with difficulty (0.4176ms)
+assets/monsters-expansion-0-v1.png 10 sprites, no lost opaque pixels, padded edges 457 524
+assets/monsters-expansion-1-v1.png 10 sprites, no lost opaque pixels, padded edges 420 458
+assets/monsters-expansion-2-v1.png 10 sprites, no lost opaque pixels, padded edges 438 522
+✔ monster-atlas.test.mjs (813.7197ms)
+✔ a lethal hit preserves its target and death pose once, without delaying rewards or waves (5.211ms)
+✔ resisted damage still produces a hurt reaction (0.5528ms)
+✔ poison deaths and co-op boss deaths retain visuals with correct individual rewards (0.9526ms)
+✔ AoE keeps every death and versus death events stay on their own board (0.6161ms)
+✔ final-wave kill retains its death animation after victory (0.2431ms)
+✔ repeated network packets never restart death animation, and render time controls expiry (0.4595ms)
+✔ rapid hit packets cannot endlessly postpone reactions; removed targets release hit state (0.2402ms)
+✔ the ten normal families and alternating ten-round bosses select distinct atlas cells (0.174ms)
+assets/monster-walk-0-v1.png 24 frames, no lost opaque pixels, padded edges 302 308
+assets/monster-walk-1-v1.png 24 frames, no lost opaque pixels, padded edges 309 363
+assets/monster-walk-2-v1.png 24 frames, no lost opaque pixels, padded edges 324 323
+assets/monster-walk-3-v1.png 24 frames, no lost opaque pixels, padded edges 374 288
+assets/monster-walk-4-v1.png 24 frames, no lost opaque pixels, padded edges 327 339
+assets/monster-walk-5-v1.png 24 frames, no lost opaque pixels, padded edges 371 360
+assets/monster-walk-6-v1.png 24 frames, no lost opaque pixels, padded edges 330 285
+✔ monster-walk-layout.test.mjs (1525.6154ms)
+✔ 40 species map to unique names and sprites; both modes cover every species (1.0476ms)
+✔ new monster profiles vary HP and speed but bosses retain their existing scaling (0.3932ms)
+✔ regen caps HP and never revives dead units; berserk and phase are temporary (0.2816ms)
+✔ healer respects cooldown, nearby loop distance, five-target cap and boss isolation (0.2961ms)
+✔ rally and barrier apply bounded statuses; stacked resistance never gives immunity (0.4843ms)
+✔ new species retain one gold rewards and waves still contain 30 enemies (1.9004ms)
+✔ all five new champions have finite stats in seven tiers and valid damage elements (1.6977ms)
+✔ lightning gains five targets and stun; tide hits four and slows at unique tier (3.4679ms)
+✔ dragon knight pierces armor and shreds two targets; assassin and gunner have conditional bonuses (0.4247ms)
+✔ new champions draw from the same shop and merge while preserving equipped items (1.4198ms)
+✔ new champions cannot attack while following movement orders (0.4904ms)
+✔ projectile frames remain in atlas across all ranged types and flight phases (0.9108ms)
+✔ HTTP sessions, 2/3/4-player rooms, authority checks, SSE and reconnection (5434.141ms)
+assets/champion-0-attack-v1.png 8 frames, no lost opaque pixels, padded edges 540 413
+assets/champion-1-attack-v1.png 8 frames, no lost opaque pixels, padded edges 543 512
+assets/champion-2-attack-v1.png 8 frames, no lost opaque pixels, padded edges 594 457
+assets/champion-3-attack-v1.png 8 frames, no lost opaque pixels, padded edges 834 565
+assets/champion-4-attack-v1.png 8 frames, no lost opaque pixels, padded edges 607 473
+assets/champion-5-attack-v1.png 8 frames, no lost opaque pixels, padded edges 508 501
+assets/champion-6-attack-v1.png 8 frames, no lost opaque pixels, padded edges 598 489
+assets/champion-7-attack-v1.png 8 frames, no lost opaque pixels, padded edges 680 412
+assets/champion-8-attack-v1.png 8 frames, no lost opaque pixels, padded edges 610 454
+assets/champion-9-attack-v1.png 8 frames, no lost opaque pixels, padded edges 600 573
+assets/champion-10-attack-v1.png 8 frames, no lost opaque pixels, padded edges 614 523
+assets/champion-11-attack-v1.png 8 frames, no lost opaque pixels, padded edges 484 443
+assets/champion-12-attack-v1.png 8 frames, no lost opaque pixels, padded edges 552 437
+assets/champion-13-attack-v1.png 8 frames, no lost opaque pixels, padded edges 461 442
+assets/champion-14-attack-v1.png 8 frames, no lost opaque pixels, padded edges 551 460
+✔ sprite-layout.test.mjs (2687.5904ms)
+✔ five-second DPS sums actual damage and decays while idle (1.0098ms)
+✔ private DPS and internal history never reach other players including reconnect snapshot (0.286ms)
+✔ oracle chooses strongest ally and applies either buff without unbounded stacking (1.2559ms)
+✔ overkill is excluded from DPS and buff expires after ten seconds (6.8362ms)
+✔ 50 distinct valid combinations each activate only with all required types (2.3518ms)
+✔ duplicates cannot replace a required type or multiply a bonus (0.9686ms)
+✔ bonuses affect actual stats and only participating types (5.2843ms)
+✔ owners and dispatched battlefields cannot complete each others combinations (0.2821ms)
+✔ selling removes the bonus immediately, repeated refresh never compounds (0.6657ms)
+✔ full roster bonuses stay inside all category caps (0.4941ms)
+✔ 42 unique talents and 20 selections through round100 never repeat owned cards or duplicate offers (20.7422ms)
+✔ actual wave5 keeps fighting while awaiting choice; invalid and duplicate choices do not mutate (2.2542ms)
+✔ online offers queue without pause and apply only to choosing player; queued cards refill after duplicates removed (0.5484ms)
+✔ discounts charge real costs, new summons inherit talents, mastery stats and caps are finite (1.8516ms)
+✔ instant gold once, boss bonus in damage, cooldown talent in actual casting clock (1.3318ms)
+✔ hold position cancels group movement and only controls owned champions (1.1217ms)
+✔ automatic approach enables whole selected group and rejects invalid input (0.2186ms)
+✔ sale pays 15 once, returns all equipment, rejects foreign heroes and full inventory (1.6551ms)
+✔ coop has personal boards plus world boss, 30 normal enemies each, deadline defeat (2.9004ms)
+✔ shared 100 monster limit counts every personal board (0.3688ms)
+✔ dispatch moves combat ownership, support stays on board, victory returns champions (2.8578ms)
+✔ gold support is atomic and cannot overspend or target yourself (0.9923ms)
+✔ hidden card choices are private and one revealed card applies while battle continues (0.5095ms)
+✔ walking cycles through eight frames by distance and retains direction vertically (0.6095ms)
+✔ blocked orders stop walking; pause freezes; preparation teleports never walk (0.5669ms)
+✔ renderer uses walking frames while moving and attack frames only after stopping (0.5998ms)
+assets/champion-0-walk-v1.png 8 frames, no lost opaque pixels, padded edges 451 451
+assets/champion-1-walk-v1.png 8 frames, no lost opaque pixels, padded edges 449 491
+assets/champion-2-walk-v1.png 8 frames, no lost opaque pixels, padded edges 433 455
+assets/champion-3-walk-v1.png 8 frames, no lost opaque pixels, padded edges 387 456
+assets/champion-4-walk-v1.png 8 frames, no lost opaque pixels, padded edges 439 482
+assets/champion-5-walk-v1.png 8 frames, no lost opaque pixels, padded edges 461 425
+assets/champion-6-walk-v1.png 8 frames, no lost opaque pixels, padded edges 424 441
+assets/champion-7-walk-v1.png 8 frames, no lost opaque pixels, padded edges 442 476
+assets/champion-8-walk-v1.png 8 frames, no lost opaque pixels, padded edges 392 452
+assets/champion-9-walk-v1.png 8 frames, no lost opaque pixels, padded edges 367 452
+assets/champion-10-walk-v1.png 8 frames, no lost opaque pixels, padded edges 436 493
+assets/champion-11-walk-v1.png 8 frames, no lost opaque pixels, padded edges 489 447
+assets/champion-12-walk-v1.png 8 frames, no lost opaque pixels, padded edges 461 441
+assets/champion-13-walk-v1.png 8 frames, no lost opaque pixels, padded edges 444 457
+assets/champion-14-walk-v1.png 8 frames, no lost opaque pixels, padded edges 446 457
+✔ walk-sprite-layout.test.mjs (2779.1522ms)
+ℹ tests 120
+ℹ suites 0
+ℹ pass 120
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 5695.6674
