@@ -100,3 +100,17 @@ const accountProfile=document.querySelector('.sidebar .profile');
 if(accountProfile){accountProfile.tabIndex=0;accountProfile.setAttribute('role','button');accountProfile.setAttribute('aria-label','내 꾸미기 보관함 열기');accountProfile.title='내 꾸미기 · 장착 / 해제';const open=()=>{if(!user){document.querySelector('#login').showModal();return;}openWardrobe(api,equipment=>{user.cosmetics=equipment;applyProfile(equipment,user.name);if(page==='shop')shop();},user.name);};accountProfile.addEventListener('click',open);accountProfile.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();open();}});}
 
 document.addEventListener('change',async e=>{const input=e.target.closest('[data-auto-boss]');if(!input)return;try{await act({type:'autoBoss',id:Number(input.dataset.autoBoss),enabled:input.checked});}catch(error){input.checked=!input.checked;toast(error.message);}});
+
+
+// LOOP menu BGM - isolated from login/auth code
+const loopMenuBgm=new Audio('https://opengameart.org/sites/default/files/main_menu_-_dark_0.mp3');
+loopMenuBgm.loop=true;
+loopMenuBgm.volume=0.22;
+let loopMenuBgmStarted=false;
+function startLoopMenuBgm(){
+  if(loopMenuBgmStarted)return;
+  loopMenuBgmStarted=true;
+  loopMenuBgm.play().catch(()=>{loopMenuBgmStarted=false;});
+}
+document.addEventListener('pointerdown',startLoopMenuBgm,{once:true});
+document.addEventListener('keydown',startLoopMenuBgm,{once:true});
