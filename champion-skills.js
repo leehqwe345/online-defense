@@ -32,7 +32,7 @@ export function tryChampionSkill(g,b,owners,p,c,near,api){if(c.silenceUntil>g.ti
  const living=()=>b.monsters.filter(m=>m.hp>0),point=m=>api.position(m.p,m),distance=(a,z)=>Math.hypot(a.x-z.x,a.y-z.y);
  const cluster=near.reduce((best,m)=>living().filter(n=>distance(point(n),point(m))<=radius).length>living().filter(n=>distance(point(n),point(best))<=radius).length?m:best,near[0]);
  const strongest=[...near].sort((a,z)=>Number(z.boss)-Number(a.boss)||z.hp-a.hp)[0];
- const hit=(m,mult,element=api.elements[type])=>{if(m.hp<=0)return;const dealt=api.damage(m,s.attack*mult*power,element,s);api.recordDamage(c,Math.min(m.hp,dealt),g.time);m.hp-=dealt;m.lastHit=p.id;m.hurt={born:g.time,type,dx:0,dy:0};};
+ const hit=(m,mult,element=api.elements[type])=>{if(m.hp<=0)return;const dealt=api.damage(m,s.attack*mult*power,element,s);api.recordDamage(c,Math.min(m.hp,dealt),g.time,b.world);m.hp-=dealt;m.lastHit=p.id;m.hurt={born:g.time,type,dx:0,dy:0};};
  const area=(center)=>living().filter(m=>distance(point(m),center)<=radius);
  const slow=(m,amount,duration)=>{if(m.slow<=0||amount>=(m.slowAmount||0)){m.slowAmount=amount;m.slow=duration*(m.defenses.includes('슬로우저항')?.35:1);}};
  const around=point(cluster);let visual=around;
@@ -70,7 +70,7 @@ export function updateChampionSkills(g,b,owners,api){
  const pending=g.skillPending||[];for(const e of pending.filter(e=>e.board===bi&&e.targetId!==undefined)){const target=b.monsters.find(m=>m.id===e.targetId);if(target)e.center=api.position(target.p,target);}g.skillPending=pending.filter(e=>e.board!==bi||e.at>g.time);
  for(const e of pending.filter(e=>e.board===bi&&e.at<=g.time)){
   const source=owners.flatMap(p=>p.champions).find(c=>c.id===e.source),target=b.monsters.find(m=>m.id===e.targetId);if(target)e.center=api.position(target.p,target);
-  for(const m of b.monsters){if(m.hp<=0)continue;const pos=api.position(m.p,m);if(Math.hypot(pos.x-e.center.x,pos.y-e.center.y)>e.radius)continue;const dealt=api.damage(m,e.attack*e.mult,e.element,e.stats);api.recordDamage(source,Math.min(m.hp,dealt),g.time);m.hp-=dealt;m.lastHit=e.owner;m.hurt={born:g.time,type:e.type,dx:0,dy:0};if(e.type===5){m.stun=Math.max(m.stun,m.boss?.1:.35);m.skillShred=.15*(m.defenses.includes('방깎저항')?.35:1);m.skillShredUntil=g.time+4;}}
+  for(const m of b.monsters){if(m.hp<=0)continue;const pos=api.position(m.p,m);if(Math.hypot(pos.x-e.center.x,pos.y-e.center.y)>e.radius)continue;const dealt=api.damage(m,e.attack*e.mult,e.element,e.stats);api.recordDamage(source,Math.min(m.hp,dealt),g.time,b.world);m.hp-=dealt;m.lastHit=e.owner;m.hurt={born:g.time,type:e.type,dx:0,dy:0};if(e.type===5){m.stun=Math.max(m.stun,m.boss?.1:.35);m.skillShred=.15*(m.defenses.includes('방깎저항')?.35:1);m.skillShredUntil=g.time+4;}}
   show(g,bi,{id:e.source},e.type,e.center,e.radius*2*g.mapScale);
  }
 }

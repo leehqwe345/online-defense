@@ -8,3 +8,5 @@ export function encounterScope(g,b){
  return {boards,players};
 }
 export function mirrorBossEvents(g,b,key,event){for(const target of encounterScope(g,b).boards){target[key]=(target[key]||[]).filter(e=>e.until>g.time);target[key].push({...event});}}
+
+export function playerMapOrder(g,ownId){const own=Math.max(0,g.players.findIndex(p=>p.id===ownId));return [own,...g.players.map((_,i)=>i).filter(i=>i!==own)];}

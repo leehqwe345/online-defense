@@ -36,7 +36,7 @@ test('HTTP sessions, 2/3/4-player rooms, authority checks, SSE and reconnection'
 
  assert.equal((await request('lobby-card',{card:14},clients[1].cookie)).status,200);
  assert.equal((await snapshot(clients[0].cookie)).room.players[1].lobbyCard,14);
- assert.equal((await request('lobby-card',{card:15},clients[1].cookie)).status,400);
+ assert.equal((await request('lobby-card',{card:20},clients[1].cookie)).status,400);
  assert.equal((await request('lobby-settings',{capacity:4},clients[1].cookie)).status,403);
  assert.equal((await request('lobby-settings',{capacity:4,mode:'versus',random:true,hard:2},clients[0].cookie)).status,200);
  let changed=await snapshot(clients[1].cookie);assert.equal(changed.room.capacity,4);assert.equal(changed.room.mode,'versus');assert.equal(changed.room.hard,2);

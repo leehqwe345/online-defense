@@ -1,3 +1,4 @@
+import {BossAreaVisuals} from './boss-area.js';
 import {graphics,getSettings} from './graphics-settings.js';
 import {CosmeticEffects} from './cosmetic-effects.js';
 import {equippedProduct,themeFor} from './cosmetics.js';
@@ -73,7 +74,7 @@ export class ArenaRenderer {
     this.bossArena=new Image();this.bossArena.src='/assets/boss-arena-citadel-v1.png';
     this.projectileAtlas=new Image();this.projectileAtlas.src='/assets/projectiles-v1.png';this.blessingFrame=new Image();this.blessingFrame.src='/assets/blessing-frame-v1.png';this.art = new ArtAssets(); this.attacks = new Map(); this.seen = new Map(); this.visualEffects = [];
     this.monsterVisuals = new MonsterVisuals(this.art);
-    this.mapArt = new MapArt(); this.bossVisuals = new BossSkillVisuals(); this.championSkillVisuals = new ChampionSkillVisuals();
+    this.areaVisuals=new BossAreaVisuals();this.mapArt = new MapArt(); this.bossVisuals = new BossSkillVisuals(); this.championSkillVisuals = new ChampionSkillVisuals();
     this.clock = 0; this.lastFrame = performance.now();
   }
   receive(game) {
@@ -130,6 +131,7 @@ export class ArenaRenderer {
       const boss=board.monsters.find(m=>m.hp>0),label=(game.mode==='coop'?'월드보스 성채':'보스 성채')+' · 플레이어당 5명'+(boss?' · '+board.expiresRound+'라운드 전까지 처치':' · 다음 보스 출현 대기');
       const w=ctx.measureText(label).width+28;ctx.fillStyle='#06101bd9';ctx.fillRect(-w/2,-16,w,25);ctx.fillStyle='#efd6a0';ctx.fillText(label,0,1);ctx.restore();
     }else{const theme=this.mapArt.draw(ctx,mapItem?themeFor(mapItem).map*10+1:game.round||1,this.clock,!!mapItem);this.mapArt.drawRoad(ctx,theme);}
+    this.areaVisuals.draw(ctx,board,game.time,quality.world);
     ctx.textAlign = 'center';
     for (const m of board.monsters) {
       const old = previousMonsters.get(m.id) || m;
@@ -161,6 +163,7 @@ export class ArenaRenderer {
       ctx.fillStyle = '#060e0aaa'; ctx.beginPath(); ctx.ellipse(c.x, c.y + 14, 24, 9, 0, 0, Math.PI * 2); ctx.fill();
       ctx.strokeStyle = COLORS[c.tier] + 'a0'; ctx.lineWidth = (c.id === selected || selectedIds.includes(c.id)) ? 2 : 1;
       ctx.beginPath(); ctx.ellipse(c.x, c.y + 12, 25, 9, 0, 0, Math.PI * 2); ctx.stroke();
+      const areaStatus=[['areaStunUntil','기절'],['areaSlowUntil','둔화'],['areaWeakUntil','피해 감소']].find(([key])=>c[key]>game.time);if(areaStatus){ctx.save();ctx.translate(c.x,c.y-90);ctx.scale(1,1/this.verticalScale);ctx.fillStyle='#24080dda';ctx.fillRect(-44,-12,88,22);ctx.fillStyle='#ffb49e';ctx.font='bold 11px sans-serif';ctx.textAlign='center';ctx.fillText(areaStatus[1]+' '+Math.ceil((c[areaStatus[0]]-game.time)/2)+'초',0,3);ctx.restore();}
       const ally = false;
       if (this.art.ready) this.drawCharacterSprite(ctx, c, type, ally);
       else { ctx.save(); if (ally) ctx.filter = 'grayscale(1) brightness(.72)'; this.drawChampion(ctx, c.x, c.y, type, ally ? '#8b9290' : color); ctx.restore(); }

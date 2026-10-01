@@ -225,10 +225,11 @@ const server=http.createServer(
           )?.[1];
 
       let user=sessions.get(token);
+      if(!user&&token){const profile=await accountStore.restoreSession(token);if(profile){user={id:profile.id,name:profile.nickname||'수호자',needsNickname:!profile.nickname,google:true,lobbyCard:profile.lobbyCard??0,cosmetics:(await accountStore.cosmetics(profile.id)).equipped,seen:Date.now(),room:null};sessions.set(token,user);}}
 
       if(
         user &&
-        Date.now()-user.seen>86400000
+        Date.now()-user.seen>2592000000
       ){
         sessions.delete(token);
         user=null;
@@ -344,7 +345,9 @@ const server=http.createServer(
           }
         }
 
+        await accountStore.revokeSessions(uid);
         token=id();
+        await accountStore.saveSession(token,uid);
 
         user={
           id:uid,
@@ -372,7 +375,7 @@ const server=http.createServer(
 
         res.setHeader(
           'Set-Cookie',
-          `session=${token}; HttpOnly; SameSite=Strict; Path=/; Max-Age=86400${
+          `session=${token}; HttpOnly; SameSite=Strict; Path=/; Max-Age=2592000${
             process.env.PUBLIC_ORIGIN
               ?.startsWith('https:')
               ?'; Secure'
@@ -1149,6 +1152,8 @@ if(url.pathname==='/api/me'){
       }
 
       const staticFiles={
+'/assets/cosmetic-effects-v4.png':'assets/cosmetic-effects-v4.png',
+'/boss-area.js':'boss-area.js','/cosmetic-bounds.js':'cosmetic-bounds.js','/assets/boss-area-frames-v1.png':'assets/boss-area-frames-v1.png',
  '/assets/map-citadel-default-v1.png':'assets/map-citadel-default-v1.png',
  '/assets/map-citadel-forest-v1.png':'assets/map-citadel-forest-v1.png',
  '/assets/map-citadel-frost-v1.png':'assets/map-citadel-frost-v1.png',
@@ -1383,6 +1388,17 @@ if(url.pathname==='/api/me'){
         '/assets/effects-v3.png':
           'assets/effects-v3.png',
 
+        '/assets/settings-study-v1.png':'assets/settings-study-v1.png',
+        '/assets/settings-castle-v1.png':'assets/settings-castle-v1.png',
+        '/collection-premium.css':'collection-premium.css',
+'/assets/shop-banner-v2.png':'assets/shop-banner-v2.png',
+'/assets/ranking-banner-v2.png':'assets/ranking-banner-v2.png',
+'/assets/champion-banner-v2.png':'assets/champion-banner-v2.png',
+'/assets/equipment-banner-v2.png':'assets/equipment-banner-v2.png',
+'/home-citadel.css':'home-citadel.css',
+        '/assets/home-single-v2.png':'assets/home-single-v2.png',
+        '/assets/home-coop-v2.png':'assets/home-coop-v2.png',
+        '/assets/home-versus-v2.png':'assets/home-versus-v2.png',
         '/style.css':
           'style.css'
       };
@@ -1533,7 +1549,7 @@ const gameTimer=setInterval(
     for(const [k,u] of sessions){
       if(
         Date.now()-u.seen>
-        86400000
+        2592000000
       ){
         leave(u);
         sessions.delete(k);

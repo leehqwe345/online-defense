@@ -1,0 +1,4 @@
+# Main screen generated assets
+Built-in image_gen used. Assets: assets/home-single-v2.png, assets/home-coop-v2.png, assets/home-versus-v2.png.
+Prompts: 16:9 production dark fantasy anime painterly game key art, no text or UI. Single: lone crimson-caped swordsman, ivory full moon, grey ruined arches and gothic castle, monster siege. Coop: five allied heroes, luminous azure moon, blue portal gothic castle. Versus: rival heroes, crimson moon, obsidian castle with two glowing red sigils, purple/red magic. All: darker left third for live heading, detailed castle and heroes on right; supplied main screen and mode banners used as visual inspiration.
+Same generated asset drives each mode card, hero background, and deploy panel. Typography and controls remain live HTML. CSS home-only scoping preserves other screens.

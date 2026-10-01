@@ -1,10 +1,10 @@
 export const THEMES=[
  {id:'forest',name:'새벽숲',color:'#9eea83',symbol:'❧',map:0,scene:'/assets/lobby-courtyard-v1.png'},
  {id:'frost',name:'서리왕관',color:'#87dfff',symbol:'❄',map:2,scene:'/assets/auth-castle-v1.png'},
- {id:'ember',name:'잿불군주',color:'#ff9978',symbol:'♨',map:3,scene:'/assets/shop-banner-v1.png'},
- {id:'arcane',name:'별의서약',color:'#c2a0ff',symbol:'✦',map:4,scene:'/assets/command-scenes-v1.png'},
- {id:'ocean',name:'달빛해무',color:'#7be6d7',symbol:'≋',map:5,scene:'/assets/battle-ruins-v1.png'},
- {id:'royal',name:'황금성역',color:'#f6d683',symbol:'♛',map:8,scene:'/assets/auth-castle-v1.png'}
+ {id:'ember',name:'잿불군주',color:'#ff9978',symbol:'♨',map:3,scene:'/assets/home-versus-v2.png'},
+ {id:'arcane',name:'별의서약',color:'#c2a0ff',symbol:'✦',map:4,scene:'/assets/settings-study-v1.png'},
+ {id:'ocean',name:'달빛해무',color:'#7be6d7',symbol:'≋',map:5,scene:'/assets/home-coop-v2.png'},
+ {id:'royal',name:'황금성역',color:'#f6d683',symbol:'♛',map:8,scene:'/assets/champion-banner-v2.png'}
 ];
 export const SLOTS={avatar:'초상화',frame:'프로필 테두리',nameplate:'명패',title:'칭호',lobby:'대기실 배경',entry:'입장 연출',map:'전장 테마',summon:'소환진',kill:'처치 연출',victory:'승리 연출',emote:'이모티콘'};
 const locations={avatar:'내 프로필 · 대기실 · 랭킹',frame:'내 프로필 · 대기실 · 랭킹',nameplate:'내 프로필 · 대기실 · 랭킹',title:'내 프로필 · 대기실 · 랭킹',lobby:'대기실의 내 캐릭터 카드 배경',entry:'대기실 첫 입장 시 내 카드',map:'자신의 전장 배경 (이동 경로 유지)',summon:'새 챔피언 소환 시 발밑',kill:'내 챔피언이 처치한 몬스터 위치',victory:'방어 성공 또는 대전 승리 화면',emote:'대기실 채팅의 이모티콘 버튼'};
