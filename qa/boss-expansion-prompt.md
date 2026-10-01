@@ -1,0 +1,1 @@
+Built-in image_gen. Transparent 4x3 full body colossal fantasy boss sprite atlas: ice bear, abyss kraken, golden lion, spectral dragon, minotaur, thunder griffin, venom spider, sand scorpion, celestial knight, three-headed wolf, phoenix, coral leviathan. Saved assets/boss-expansion-v1.png. Existing two bosses preserved, total14.

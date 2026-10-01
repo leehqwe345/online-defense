@@ -1,0 +1,1 @@
+Built-in image_gen. Two transparent 4-column 7-row effect atlases, each row four sequential ignition/expansion/peak/fade frames. A: jade dome, lava, blizzard, abyss, lion roar, ghost dragon, axe shockwave. B: lightning feathers, poison web, sandstorm, celestial shield, nightmare wolves, phoenix, coral tide. Assets: assets/boss-arrival-a.png and assets/boss-arrival-b.png.

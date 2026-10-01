@@ -1,0 +1,22 @@
+✔ 60-second pressure adds a wave without removing survivors in single and co-op (15.4348ms)
+✔ clearing early resets countdown for the next wave (0.1343ms)
+✔ no defense reaches the 100-monster loss condition at round four (23.8143ms)
+✔ versus does not spawn from timer, and 100 is the last wave (7.4174ms)
+✔ pause freezes combat and countdown; fixed 2x uses simulation substeps (1.2017ms)
+✔ auto formation stays inside map and affects only requesting player (0.4328ms)
+✔ target priority excludes immunity and obeys boss or health priority (0.1631ms)
+✔ late-game HP curve is bounded, monotonically increasing and scales with difficulty (0.1216ms)
+✔ sale pays 15 once, returns all equipment, rejects foreign heroes and full inventory (0.8804ms)
+✔ coop has personal boards plus world boss, 30 normal enemies each, deadline defeat (1.4773ms)
+✔ shared 100 monster limit counts every personal board (0.7296ms)
+✔ dispatch moves combat ownership, support stays on board, victory returns champions (1.5231ms)
+✔ gold support is atomic and cannot overspend or target yourself (0.5249ms)
+✔ round five no longer grants trait cards (0.1234ms)
+ℹ tests 14
+ℹ suites 0
+ℹ pass 14
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 103.5459

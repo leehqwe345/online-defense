@@ -1,0 +1,1 @@
+Built-in image_gen. HUD: dark navy forest ultra-wide gold rim background without text. Boss: isolated full-body slate stone colossus with blue lightning fissures, top-down three-quarter view. Assets: assets/battle-hud-v3.png; assets/boss-colossus-v1.png.

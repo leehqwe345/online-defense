@@ -1,0 +1,4 @@
+생성 도구: built-in image_gen
+배경 파일: assets/wardrobe-hall-v1.png
+프롬프트: Create a refined fantasy game wardrobe preview background texture, portrait 2:3 composition. A midnight navy royal stone hall, delicate tall gothic arches and very faint muted gold architectural edges, distant soft blue mist, dim warm sconces along sides. Central area largely dark empty space to overlay a large avatar and nameplate UI. Upper architecture visible but low contrast, bottom fades smoothly into solid near-black navy #08131e. Elegant clean painterly game environment, subtle detail, not busy. No characters, no items, no text, no UI, no logos. It will be used behind a cosmetic profile preview in a modern navy-and-gold game inventory modal.
+검증: 별도 테스트 보관함에서 6종 예시 상품, 장착/해제, 프로필 필터, 빈 검색 결과, 1920x1080 및 1280x720 레이아웃 확인. 실제 계정 데이터 변경 없음.

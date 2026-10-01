@@ -1,0 +1,16 @@
+✔ hold position cancels group movement and only controls owned champions (0.5381ms)
+✔ automatic approach cannot be enabled for any selected group (0.1037ms)
+✔ sale pays 15 once, returns all equipment, rejects foreign heroes and full inventory (0.9868ms)
+✔ coop has personal boards plus world boss, 30 normal enemies each, deadline defeat (1.3632ms)
+✔ shared 100 monster limit counts every personal board (0.5924ms)
+✔ dispatch moves combat ownership, support stays on board, victory returns champions (1.5393ms)
+✔ gold support is atomic and cannot overspend or target yourself (0.5452ms)
+✔ round five no longer grants trait cards (0.1236ms)
+ℹ tests 8
+ℹ suites 0
+ℹ pass 8
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 63.6832

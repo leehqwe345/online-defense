@@ -1,0 +1,29 @@
+assets/champion-0-walk-v1.png 8 frames, no lost opaque pixels, padded edges 451 451
+assets/champion-1-walk-v1.png 8 frames, no lost opaque pixels, padded edges 449 491
+assets/champion-2-walk-v1.png 8 frames, no lost opaque pixels, padded edges 433 455
+assets/champion-3-walk-v1.png 8 frames, no lost opaque pixels, padded edges 387 456
+assets/champion-4-walk-v1.png 8 frames, no lost opaque pixels, padded edges 439 482
+assets/champion-5-walk-v1.png 8 frames, no lost opaque pixels, padded edges 461 425
+assets/champion-6-walk-v1.png 8 frames, no lost opaque pixels, padded edges 424 441
+assets/champion-7-walk-v1.png 8 frames, no lost opaque pixels, padded edges 442 476
+assets/champion-8-walk-v1.png 8 frames, no lost opaque pixels, padded edges 392 452
+assets/champion-9-walk-v1.png 8 frames, no lost opaque pixels, padded edges 367 452
+assets/champion-10-walk-v1.png 8 frames, no lost opaque pixels, padded edges 436 493
+assets/champion-11-walk-v1.png 8 frames, no lost opaque pixels, padded edges 489 447
+assets/champion-12-walk-v1.png 8 frames, no lost opaque pixels, padded edges 461 441
+assets/champion-13-walk-v1.png 8 frames, no lost opaque pixels, padded edges 444 457
+assets/champion-14-walk-v1.png 8 frames, no lost opaque pixels, padded edges 446 457
+assets/champion-15-motion-v1.png 8 frames, no lost opaque pixels, padded edges 493 335
+assets/champion-16-motion-v1.png 8 frames, no lost opaque pixels, padded edges 499 293
+assets/champion-17-motion-v1.png 8 frames, no lost opaque pixels, padded edges 525 307
+assets/champion-18-motion-v1.png 8 frames, no lost opaque pixels, padded edges 457 295
+assets/champion-19-motion-v1.png 8 frames, no lost opaque pixels, padded edges 529 309
+✔ walk-sprite-layout.test.mjs (3571.6315ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 1
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 3576.0628

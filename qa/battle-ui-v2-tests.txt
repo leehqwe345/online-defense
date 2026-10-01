@@ -1,0 +1,15 @@
+✔ browser entry points and modules parse successfully (430.7451ms)
+✔ sale pays 15 once, returns all equipment, rejects foreign heroes and full inventory (0.938ms)
+✔ coop has personal boards plus world boss, 30 normal enemies each, deadline defeat (1.5549ms)
+✔ shared 100 monster limit counts every personal board (0.6808ms)
+✔ dispatch moves combat ownership, support stays on board, victory returns champions (1.5964ms)
+✔ gold support is atomic and cannot overspend or target yourself (0.5448ms)
+✔ round five no longer grants trait cards (0.1243ms)
+ℹ tests 7
+ℹ suites 0
+ℹ pass 7
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 480.5369

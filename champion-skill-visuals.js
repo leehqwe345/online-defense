@@ -1,12 +1,12 @@
 import {talentTotals} from './talents.js';
 import {boardOwners} from './engine.js';
-import {SKILL_ATLAS,CHAMPION_SKILLS} from './champion-skills.js';
+import {SKILL_ATLAS,CHAMPION_SKILLS,skillArtType} from './champion-skills.js';
 export class ChampionSkillVisuals{
  constructor(){this.image=new Image();this.image.src=SKILL_ATLAS;}
  draw(ctx,g,bi,scale,positions,position){
   ctx.save();const density=ctx.getTransform().a;ctx.setTransform(density,0,0,density,0,0);
   if(this.image.complete&&this.image.naturalWidth){const w=this.image.naturalWidth/5,h=this.image.naturalHeight/3;
-   for(const e of (g.skillEffects||[]).filter(e=>e.board===bi&&e.until>g.time).slice(-150)){const age=Math.max(0,g.time-e.born),fade=Math.max(0,1-age/1.2),size=e.size*(.8+age*.45);ctx.globalCompositeOperation='screen';ctx.globalAlpha=fade*.9;ctx.drawImage(this.image,e.type%5*w,Math.floor(e.type/5)*h,w,h,e.x-size/2,e.y*scale-size/2,size,size);}
+   for(const e of (g.skillEffects||[]).filter(e=>e.board===bi&&e.until>g.time).slice(-150)){const age=Math.max(0,g.time-e.born),fade=Math.max(0,1-age/1.2),size=e.size*(.8+age*.45);ctx.globalCompositeOperation='screen';ctx.globalAlpha=fade*.9;ctx.drawImage(this.image,skillArtType(e.type)%5*w,Math.floor(skillArtType(e.type)/5)*h,w,h,e.x-size/2,e.y*scale-size/2,size,size);}
   }
   ctx.globalCompositeOperation='source-over';ctx.globalAlpha=1;ctx.textAlign='center';
   for(const e of (g.skillPending||[]).filter(e=>e.board===bi&&[4,8].includes(e.type)&&e.mult>=4)){

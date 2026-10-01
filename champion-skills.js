@@ -9,15 +9,21 @@ export const CHAMPION_SKILLS=[
  ['폭풍의 가호',20,'주변 아군 공격속도 +35% · 6초'],
  ['맹독 확산',16,'주변에 독 전파 · 중독된 적은 3배, 나머지는 1.5배 피해'],
  ['시한폭탄',15,'높은 체력의 적에게 부착 · 3초 후 주변에 5배 피해'],
- ['영웅의 축복',20,'강한 아군 피해량 또는 공속 +60% · 8초, 공포 해제'],
+ ['영웅의 축복',20,'버프 없는 무작위 아군 피해량 또는 공속 +60% · 8초, 공포 해제'],
  ['연쇄 번개',14,'최대 8회 연쇄 · 재타격은 35% 피해'],
  ['처형의 표식',12,'낮은 체력의 적에게 5배 피해 · 처치 시 쿨타임 50% 환급'],
  ['용의 숨결',18,'부채꼴 화염 3.5배 마법 피해'],
  ['밀려오는 해일',16,'경로를 따라 파도 3배 피해 · 3초 둔화, 짧은 기절'],
  ['공성 포격',22,'보스 우선 포격 · 6배 피해, 보스에게 추가 50%'],
+ ['분쇄의 망치',16,'주변 최대 4명에게 3배 피해 · 4초 방어 저항 20% 감소'],
+ ['쌍월 난무',12,'한 대상에 4연격 · 회당 1.2배 피해'],
+ ['황혼 관통탄',15,'최대 3명에게 3배 피해'],
+ ['룬 폭쇄',14,'근접 최대 5명에게 지속성 3배 피해 · 짧은 기절'],
+ ['시간의 균열',20,'최대 5명에게 2배 피해 · 4초간 60% 둔화'],
 ].map(([name,cooldown,description],type)=>({type,name,cooldown,description}));
+export const skillArtType=type=>[2,11,0,5,3][type-15]??type;
 export const SKILL_ATLAS='/assets/champion-skills-v1.png';
-export function skillMarkup(c,time){const skill=CHAMPION_SKILLS[c.base];if(!skill)return '';const cooldown=skill.cooldown*(1-talentTotals(c.talents).cooldown);const remaining=Math.max(0,(c.skillReadyAt??time+cooldown)-time);return `<section class="champion-skill"><span class="champion-skill-icon" style="background-position:${c.base%5*25}% ${Math.floor(c.base/5)*50}%"></span><div><strong>${skill.name}</strong><small>${skill.description}</small><b>${c.tier<4?'유니크 등급부터 해금':remaining>0?'재사용 '+Math.ceil(remaining)+'초':'자동 사용 준비'} · ${Number(cooldown.toFixed(1))}초</b><small>에픽·레전더리: 스킬별 피해·범위·버프 강화 / 레전더리 축복 2명</small></div></section>`;}
+export function skillMarkup(c,time){const skill=CHAMPION_SKILLS[c.base];if(!skill)return '';const cooldown=skill.cooldown*(1-talentTotals(c.talents).cooldown);const remaining=Math.max(0,(c.skillReadyAt??time+cooldown)-time);return `<section class="champion-skill"><span class="champion-skill-icon" style="background-position:${skillArtType(c.base)%5*25}% ${Math.floor(skillArtType(c.base)/5)*50}%"></span><div><strong>${skill.name}</strong><small>${skill.description}</small><b>${c.tier<4?'유니크 등급부터 해금':remaining>0?'재사용 '+Math.ceil(remaining)+'초':'자동 사용 준비'} · ${Number(cooldown.toFixed(1))}초</b><small>에픽·레전더리: 스킬별 피해·범위·버프 강화 / 레전더리 축복 2명</small></div></section>`;}
 function show(g,bi,c,type,point,size=110){g.skillEffects??=[];g.skillEffects.push({source:c.id,type,board:bi,x:point.x,y:point.y,size,born:g.time,until:g.time+1.2});}
 function buff(c,kind,amount,until,now,source){c.supportBuffs??={};const old=c.supportBuffs[kind];if(!old||old.until<=now||old.amount<=amount)c.supportBuffs[kind]={amount,until,source};}
 export function tryChampionSkill(g,b,owners,p,c,near,api){if(c.silenceUntil>g.time)return false;
@@ -39,7 +45,7 @@ export function tryChampionSkill(g,b,owners,p,c,near,api){if(c.silenceUntil>g.ti
  case 3:for(const m of area(around)){hit(m,2);if(m.boss)slow(m,.6,2);else m.stun=Math.max(m.stun,2+(c.tier-4)*.3);}break;
  case 4:schedule(g.time+1,around,4);for(let i=2;i<=4;i++)schedule(g.time+i,around,.8);break;
  case 5:for(let i=0;i<3;i++)schedule(g.time+i*.5,around,1);break;
- case 6:case 9:{let allies=owners.flatMap(o=>o.champions).filter(a=>a.base!==9);if(type===6)allies=allies.filter(a=>distance(a,c)<=220/g.mapScale);else allies.sort((a,z)=>{const x=api.stats({...a,supportBuffs:{}}),y=api.stats({...z,supportBuffs:{}});return y.attack*y.speed*y.targets-x.attack*x.speed*x.targets;});if(type===9)allies=allies.slice(0,c.tier===6?2:1);if(!allies.length){c.skillReadyAt=g.time;return false;}const kind=type===6?'speed':Math.random()<.5?'damage':'speed';for(const a of allies){buff(a,kind,(type===6?.35:.6)+(c.tier-4)*.1,g.time+(type===6?6:8),g.time,c.id);if(type===9){c.supportCast={target:a.id,kind,until:g.time+2};g.effects.push({source:c.id,target:a.id,x:c.x,y:c.y,tx:a.x,ty:a.y,born:g.time,until:g.time+.6,type:9,amount:0,board:g.boards.indexOf(b),support:true});}if(type===9)a.fearUntil=0;show(g,g.boards.indexOf(b),c,type,a,85);}visual=c;break;}
+ case 6:case 9:{let allies=owners.flatMap(o=>o.champions).filter(a=>a.base!==9);if(type===6)allies=allies.filter(a=>distance(a,c)<=220/g.mapScale);else allies=randomUnbuffedAllies(owners,c,g.time,c.tier===6?2:1);if(!allies.length){c.skillReadyAt=g.time;return false;}const kind=type===6?'speed':Math.random()<.5?'damage':'speed';for(const a of allies){buff(a,kind,(type===6?.35:.6)+(c.tier-4)*.1,g.time+(type===6?6:8),g.time,c.id);if(type===9){c.supportCast={target:a.id,kind,until:g.time+2};g.effects.push({source:c.id,target:a.id,x:c.x,y:c.y,tx:a.x,ty:a.y,born:g.time,until:g.time+.6,type:9,amount:0,board:g.boards.indexOf(b),support:true});}if(type===9)a.fearUntil=0;show(g,g.boards.indexOf(b),c,type,a,85);}visual=c;break;}
  case 7:for(const m of area(around)){hit(m,m.poison>0?3:1.5);const poison=api.damage(m,s.attack*.4*power,'독',s);if(poison>m.poison){m.poison=poison;m.poisonSource=c.id;m.poisonOwner=p.id;}}break;
  case 8:{const target=[...near].sort((a,z)=>z.hp-a.hp)[0];visual=point(target);schedule(g.time+3,visual,5,target.id);break;}
  case 10:{let target=cluster;const visited=new Set();for(let i=0;i<8;i++){hit(target,visited.has(target.id)?.35:1.25);show(g,g.boards.indexOf(b),c,type,point(target),65);visited.add(target.id);const candidates=living().filter(m=>distance(point(m),point(target))<=180/g.mapScale).sort((a,z)=>Number(visited.has(a.id))-Number(visited.has(z.id))||distance(point(a),point(target))-distance(point(z),point(target)));if(!candidates.length)break;target=candidates[0];}break;}
@@ -47,6 +53,11 @@ export function tryChampionSkill(g,b,owners,p,c,near,api){if(c.silenceUntil>g.ti
  case 12:{visual=point(strongest);const direction=Math.atan2(visual.y-c.y,visual.x-c.x);for(const m of living()){const q=point(m),angle=Math.atan2(q.y-c.y,q.x-c.x),delta=Math.atan2(Math.sin(angle-direction),Math.cos(angle-direction));if(distance(q,c)<=Math.max(s.range,240)/g.mapScale&&Math.abs(delta)<=Math.PI/4)hit(m,3.5,'화');}break;}
  case 13:for(const m of living()){const gap=Math.min(Math.abs(m.p-cluster.p),1-Math.abs(m.p-cluster.p));if(gap<=.08+(c.tier-4)*.015){hit(m,3);slow(m,.5,3);m.stun=Math.max(m.stun,m.boss?.15:.6);}}break;
  case 14:visual=point(strongest);hit(strongest,strongest.boss?9:6);break;
+ case 15:for(const m of near.slice(0,4)){hit(m,3);m.skillShred=Math.max(m.skillShred||0,.2*(m.defenses.includes('방깎저항')?.35:1));m.skillShredUntil=g.time+4;}visual=c;break;
+ case 16:for(let n=0;n<4;n++)hit(strongest,1.2);visual=point(strongest);break;
+ case 17:for(const m of near.slice(0,3))hit(m,3);break;
+ case 18:for(const m of near.slice(0,5)){hit(m,3);m.stun=Math.max(m.stun,m.boss?.1:.7);}visual=c;break;
+ case 19:for(const m of near.slice(0,5)){hit(m,2);slow(m,m.boss?.3:.6,4);}break;
  }
  show(g,g.boards.indexOf(b),c,type,visual,type===2?140:110);
  g.effects.push({source:c.id,target:strongest.id,x:c.x,y:c.y,tx:visual.x,ty:visual.y,born:g.time,until:g.time+.3,type,amount:0,board:g.boards.indexOf(b)});
@@ -63,3 +74,5 @@ export function updateChampionSkills(g,b,owners,api){
   show(g,bi,{id:e.source},e.type,e.center,e.radius*2*g.mapScale);
  }
 }
+
+export function randomUnbuffedAllies(owners,c,time,count=1,rng=Math.random){const pool=owners.flatMap(p=>p.champions).filter(a=>a.id!==c.id&&a.base!==9&&!!a.world===!!c.world&&!Object.values(a.supportBuffs||{}).some(b=>b.until>time));const result=[];while(pool.length&&result.length<count){const index=Math.min(pool.length-1,Math.max(0,Math.floor(rng()*pool.length)));result.push(pool.splice(index,1)[0]);}return result;}

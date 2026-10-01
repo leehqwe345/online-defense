@@ -13,9 +13,13 @@ export const MONSTER_NAMES = [...MONSTERS.slice(0,10).map(m=>m.name),'고대 비
 export function monsterSpriteIndex(monster) {
   return monster.boss ? 10 + Math.max(0, Math.floor((monster.round || 10) / 10) - 1) % 2 : ((monster.family||0)<10?Math.max(0,monster.family||0):Math.min(39,monster.family)+2);
 }
-export function monsterName(monster) { return MONSTER_NAMES[monsterSpriteIndex(monster)]; }
+export const BOSS_NAMES=['고대 비취 수호자','홍염의 군주','빙하 군왕','심연 크라켄','황금 사자왕','망령룡','핏빛 미노타우로스','천둥 그리핀','맹독 거미여왕','사막 전갈황제','천상의 심판자','삼두 악몽늑대','불멸의 불사조','산호 레비아탄'];
+export function bossVariant(m){return Number.isInteger(m.bossVariant)?((m.bossVariant%14)+14)%14:Math.max(0,Math.floor((m.round||5)/5)-1)%14;}
+export function monsterName(monster) { return monster.boss?BOSS_NAMES[bossVariant(monster)]:MONSTER_NAMES[monsterSpriteIndex(monster)]; }
 export function monsterPortraitMarkup(monster) {
   const index = monsterSpriteIndex(monster);
+  if(monster.boss&&bossVariant(monster)>=2){const i=bossVariant(monster)-2;return `<span aria-hidden="true" class="monster-portrait" style="background-image:url('/assets/boss-expansion-v1.png');background-size:400% 300%;background-position:${i%4/3*100}% ${Math.floor(i/4)/2*100}%;background-repeat:no-repeat"></span>`;}
+  if(monster.boss)return `<span aria-hidden="true" class="monster-portrait" style="background-image:url('/assets/boss-${bossVariant(monster)===0?'jade':'ember'}-v2.png');background-size:contain;background-position:center;background-repeat:no-repeat"></span>`;
   if(index>=12)return `<span aria-hidden="true" class="monster-portrait" data-monster-portrait="${index}" style="background-image:url('${monsterPortraitImages[index]||''}');background-size:contain;background-position:center"></span>`;
   return `<span aria-hidden="true" class="monster-portrait" style="background-position:${index % 4 / 3 * 100}% ${Math.floor(index / 4) * 50}%"></span>`;
 }
@@ -28,7 +32,7 @@ export class ArtAssets {
   constructor() {
     this.characters = [];
     this.effects = [];
-    this.attackFrames=[];this.walkFrames=[];this.loadAttackFrames();this.loadWalkFrames();
+    this.attackFrames=[];this.walkFrames=[];this.loadAttackFrames();this.loadWalkFrames();this.loadNewChampions();
     this.monsterWalks=[];this.loadMonsterWalks();this.monsters = []; this.monsterFlashes = []; this.reactions = [];
     this.monstersReady = false;
     this.ready = false;
@@ -36,6 +40,7 @@ export class ArtAssets {
     this.load();
     this.loadMonsters();this.loadExpandedMonsters();
   }
+  async loadNewChampions(){await Promise.all(Array.from({length:5},async(_,i)=>{const type=15+i;try{const sheet=await this.loadImage('/assets/champion-'+type+'-motion-v1.png'),frames=this.characterFrames(sheet,16);this.attackFrames[type]=frames.slice(0,8);this.walkFrames[type]=frames.slice(8,16);portraitImages[type]=this.tightPortrait(frames[7]).toDataURL();document.querySelectorAll('[data-champion-portrait="'+type+'"]').forEach(el=>el.style.backgroundImage='url("'+portraitImages[type]+'")');}catch(error){console.warn('New champion atlas',type,error);}}));}
   async loadAttackFrames(){await Promise.all(ATTACK_ATLASES.map(async(url,type)=>{try{const sheet=await this.loadImage(url);this.attackFrames[type]=this.characterFrames(sheet);portraitImages[type]=this.tightPortrait(this.attackFrames[type][7]).toDataURL();document.querySelectorAll('[data-champion-portrait="'+type+'"]').forEach(el=>el.style.backgroundImage='url("'+portraitImages[type]+'")');}catch{}}));}
   async loadWalkFrames(){await Promise.all(WALK_ATLASES.map(async(url,type)=>{try{this.walkFrames[type]=this.characterFrames(await this.loadImage(url));}catch(error){console.warn('Walking sprite failed to load',url,error);}}));}
   characterFrames(image,expected=8) {
@@ -61,8 +66,8 @@ export class ArtAssets {
         this.characters.push(this.tile(characters, i, true));
         this.effects.push(this.tile(effects, i, false));
       }
-      for(const type of [6,2,2,3,8])this.effects.push(this.effects[type]);
-      for(const type of [6,2,2,3,0])this.characters.push(this.characters[type]);
+      for(const type of [6,2,2,3,8,5,2,1,5,3])this.effects.push(this.effects[type]);
+      for(const type of [6,2,2,3,0,2,2,1,5,3])this.characters.push(this.characters[type]);
       this.ready = true;
     } catch { this.error = true; }
   }
@@ -121,7 +126,7 @@ export function splitCharacterPixels({data,width,height},expected=8) {
   }
   const bodies=parts.slice().sort((a,b)=>b.size-a.size).slice(0,expected);
   if(bodies.length!==expected)throw Error('Expected '+expected+' separate sprites');
-  if(expected===24){bodies.sort((a,b)=>(a.top+a.bottom)-(b.top+b.bottom));for(let row=0;row<6;row++)bodies.splice(row*4,4,...bodies.slice(row*4,row*4+4).sort((a,b)=>a.left-b.left));}else bodies.sort((a,b)=>((a.top+a.bottom)/2<height/2?0:1)-((b.top+b.bottom)/2<height/2?0:1)||a.left-b.left);
+  if(expected===24||expected===16){bodies.sort((a,b)=>(a.top+a.bottom)-(b.top+b.bottom));for(let row=0;row<6;row++)bodies.splice(row*4,4,...bodies.slice(row*4,row*4+4).sort((a,b)=>a.left-b.left));}else bodies.sort((a,b)=>((a.top+a.bottom)/2<height/2?0:1)-((b.top+b.bottom)/2<height/2?0:1)||a.left-b.left);
   const owner=new Int16Array(parts.length+1);owner.fill(-1);
   bodies.forEach((p,i)=>owner[p.id]=i);
   for(const p of parts)if(owner[p.id]<0){const x=(p.left+p.right)/2,y=(p.top+p.bottom)/2;let best=Infinity;

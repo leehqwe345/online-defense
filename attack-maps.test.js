@@ -11,29 +11,29 @@ function setup(base, mode = 'single') {
   return {g,c,m:g.boards[0].monsters[0]};
 }
 
-test('all damage champion types placed at center approach and attack in single, coop and versus',()=>{
+test('all damage champion types placed in range attack without moving in single, coop and versus',()=>{
   for(const mode of ['single','coop','versus'])for(const def of CHAMPIONS.filter(c=>c.type!==9)){
-    const {g,c,m}=setup(def.id,mode);
+    const {g,c,m}=setup(def.id,mode);c.y=145;
     for(let n=0;n<400;n++){tick(g,.05);assert.ok(c.x>=140&&c.x<=660&&c.y>=140&&c.y<=660);}
-    assert.ok(m.hp<m.maxHp,`${mode} ${def.name} never attacked`);
+    assert.equal(c.x,400);assert.equal(c.y,145);assert.ok(m.hp<m.maxHp,`${mode} ${def.name} never attacked`);
     if(mode==='versus')assert.equal(g.boards[1].monsters[0].hp,1e7);
   }
 });
-test('manual move orders take priority over automatic pursuit',()=>{
+test('manual move orders still move champions',()=>{
   const {g,c}=setup(2);action(g,'a',{type:'move',id:1,x:600,y:600});tick(g,.05);
   assert.ok(c.x>400&&c.y>400);assert.equal(c.combatState,'moving');assert.equal(c.approach,undefined);
 });
-test('hold position does not move, enabling approach resumes combat; other players cannot toggle it',()=>{
+test('hold stays stationary and automatic approach requests are rejected',()=>{
   const {g,c,m}=setup(2,'coop');action(g,'a',{type:'autoApproach',id:1,enabled:false});
   for(let n=0;n<40;n++)tick(g,.05);
   assert.equal(c.x,400);assert.equal(c.y,400);assert.equal(c.combatState,'range');assert.equal(m.hp,m.maxHp);
   assert.ok(action(g,'b',{type:'autoApproach',id:1,enabled:true}));assert.equal(c.autoApproach,false);
-  action(g,'a',{type:'autoApproach',id:1,enabled:true});for(let n=0;n<200;n++)tick(g,.05);assert.ok(m.hp<m.maxHp);
+  assert.ok(action(g,'a',{type:'autoApproach',id:1,enabled:true}));for(let n=0;n<200;n++)tick(g,.05);assert.equal(c.x,400);assert.equal(c.y,400);assert.equal(m.hp,m.maxHp);
 });
-test('resistant targets still trigger pursuit and receive reduced damage',()=>{const {g,c,m}=setup(2);m.defenses=['물리저항'];for(let n=0;n<400;n++)tick(g,.05);assert.ok(m.hp<m.maxHp);assert.notEqual(c.combatState,'immune');});
+test('resistant targets in range receive reduced damage',()=>{const {g,c,m}=setup(2);c.y=145;m.defenses=['물리저항'];for(let n=0;n<400;n++)tick(g,.05);assert.ok(m.hp<m.maxHp);assert.notEqual(c.combatState,'immune');});
 
-test('approach continues during cooldown and pause freezes all combat movement',()=>{
-  const {g,c}=setup(2);c.cd=3;tick(g,.05);assert.ok(c.y<400);assert.ok(c.cd>2);
+test('cooldown never moves idle champions and pause freezes combat',()=>{
+  const {g,c}=setup(2);c.cd=3;tick(g,.05);assert.equal(c.y,400);assert.ok(c.cd>2);
   action(g,'a',{type:'pause'});const frozen=structuredClone(g);tick(g,2);assert.deepEqual(g,frozen);
 });
 test('in-range champions keep their placement while firing',()=>{

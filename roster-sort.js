@@ -1,0 +1,1 @@
+export function sortMergeableChampions(champions){const counts=new Map();const key=c=>c.base+':'+c.tier;for(const c of champions)counts.set(key(c),(counts.get(key(c))||0)+1);const ready=c=>c.tier<6&&counts.get(key(c))>=2?1:0;return [...champions].sort((a,b)=>b.tier-a.tier||ready(b)-ready(a)||a.base-b.base||a.id-b.id);}

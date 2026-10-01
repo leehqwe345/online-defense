@@ -1,3 +1,6 @@
+import {graphics,getSettings} from './graphics-settings.js';
+import {CosmeticEffects} from './cosmetic-effects.js';
+import {equippedProduct,themeFor} from './cosmetics.js';
 import {ChampionSkillVisuals} from './champion-skill-visuals.js';
 import {BossSkillVisuals} from './boss-skills.js';
 import {MONSTERS,traitDefinition} from './monsters.js';
@@ -65,28 +68,30 @@ export function openMapPreview() {
 
 export class ArenaRenderer {
   constructor() {
-    this.previous = null; this.current = null; this.received = 0; this.positions = new Map();
+    this.cosmetics=new CosmeticEffects();this.previous = null; this.current = null; this.received = 0; this.positions = new Map();
     this.walkStates = new Map();
+    this.bossArena=new Image();this.bossArena.src='/assets/boss-arena-citadel-v1.png';
     this.projectileAtlas=new Image();this.projectileAtlas.src='/assets/projectiles-v1.png';this.blessingFrame=new Image();this.blessingFrame.src='/assets/blessing-frame-v1.png';this.art = new ArtAssets(); this.attacks = new Map(); this.seen = new Map(); this.visualEffects = [];
     this.monsterVisuals = new MonsterVisuals(this.art);
     this.mapArt = new MapArt(); this.bossVisuals = new BossSkillVisuals(); this.championSkillVisuals = new ChampionSkillVisuals();
     this.clock = 0; this.lastFrame = performance.now();
   }
   receive(game) {
+    if(graphics().world)this.cosmetics.receive(game,this.clock);
     if (!this.current || game.time < this.current.time) { this.walkStates.clear(); this.attacks.clear(); this.seen.clear(); this.visualEffects = []; this.monsterVisuals.reset(); }
     const aliveHeroes=new Set(game.players.flatMap(p=>p.champions.map(c=>c.id)));
     for(const id of this.walkStates.keys())if(!aliveHeroes.has(id))this.walkStates.delete(id);
     this.previous = this.current;
     this.current = game;
     this.received = performance.now();
-    this.monsterVisuals.receive(game, this.clock);
+    if(graphics().world)this.monsterVisuals.receive(game, this.clock);else this.monsterVisuals.reset();
     for (const effect of game.effects) {
       const source = effect.source ?? game.players.flatMap(p => p.champions).find(c => Math.hypot(c.x - effect.x, c.y - effect.y) < 32)?.id;
       const key = `${source}:${effect.target}:${effect.born}:${effect.tx}:${effect.ty}`;
       if (this.seen.has(key)) continue;
       this.seen.set(key, game.time);
       const shot = { ...effect, source, start: this.clock };
-      this.visualEffects.push(shot);
+      if(graphics().champion)this.visualEffects.push(shot);
       const existing = this.attacks.get(source);
       if (!existing || existing.born !== effect.born) this.attacks.set(source, shot);
     }
@@ -96,8 +101,9 @@ export class ArenaRenderer {
   draw(canvas, boardIndex, selected, selectedEnemy, selectedIds = [], dragStart = null, dragNow = null) {
     const game = this.current;
     if (!game || !canvas || !game.boards[boardIndex]) return;
+    const quality=graphics(),prefs=getSettings(),nowDraw=performance.now(),qualityKey=prefs.quality+prefs.resolution;if(qualityKey===this.qualityKey&&nowDraw-(this.lastDrawTime||0)<1000/quality.fps-1)return false;this.qualityKey=qualityKey;this.lastDrawTime=nowDraw;this.monsterVisuals.showEffects=quality.world;this.monsterVisuals.showHits=quality.champion;
     const ctx = canvas.getContext('2d');
-    const ratio=canvas.clientWidth&&canvas.clientHeight?canvas.clientHeight/canvas.clientWidth:430/800,pixelRatio=Math.min(2,globalThis.devicePixelRatio||1),width=Math.round((canvas.clientWidth||800)*pixelRatio),height=Math.round(width*ratio);
+    const ratio=canvas.clientWidth&&canvas.clientHeight?canvas.clientHeight/canvas.clientWidth:430/800,pixelRatio=quality.scale,width=Math.round((canvas.clientWidth||800)*pixelRatio),height=Math.round(width*ratio);
     if(canvas.width!==width||canvas.height!==height){canvas.width=width;canvas.height=height;}
     this.verticalScale = ratio;const density=width/800;ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';
     this.monsterVisuals.verticalScale = this.verticalScale;
@@ -116,8 +122,14 @@ export class ArenaRenderer {
     const bg = ctx.createRadialGradient(400, 350, 80, 400, 400, 560);
     bg.addColorStop(0, '#1c3028'); bg.addColorStop(1, '#101c1b');
     ctx.fillStyle = bg; ctx.fillRect(0, 0, 800, 800);
-    const theme = this.mapArt.draw(ctx, game.round || 1, this.clock);
-    if(board.world){ctx.fillStyle='#18112bbf';ctx.fillRect(0,0,800,800);ctx.strokeStyle='#b793fa';ctx.lineWidth=3;ctx.beginPath();ctx.ellipse(400,400,270,280,0,0,Math.PI*2);ctx.stroke();ctx.save();ctx.translate(400,570);ctx.scale(1,1/this.verticalScale);ctx.textAlign='center';ctx.font='bold 24px sans-serif';ctx.fillStyle='#ead1ff';ctx.fillText('WORLD BOSS',0,0);ctx.font='14px sans-serif';const boss=board.monsters[0];ctx.fillText(boss?'HP '+Math.ceil(boss.hp).toLocaleString()+' / '+Math.ceil(boss.maxHp).toLocaleString()+' · '+board.expiresRound+'라운드 전까지':'5라운드마다 출현 · 챔피언을 파견하세요',0,28);ctx.restore();}else this.mapArt.drawRoad(ctx, theme);
+    const mapOwner=game.players[boardIndex],mapItem=!board.world&&equippedProduct(mapOwner?.cosmetics,'map');
+    if(board.world){
+      if(this.bossArena.complete&&this.bossArena.naturalWidth)ctx.drawImage(this.bossArena,0,0,800,800);
+      else{ctx.fillStyle='#14202d';ctx.fillRect(0,0,800,800);}
+      ctx.save();ctx.translate(400,748);ctx.scale(1,1/this.verticalScale);ctx.textAlign='center';ctx.font='bold 12px sans-serif';
+      const boss=board.monsters.find(m=>m.hp>0),label=(game.mode==='coop'?'월드보스 성채':'보스 성채')+' · 플레이어당 5명'+(boss?' · '+board.expiresRound+'라운드 전까지 처치':' · 다음 보스 출현 대기');
+      const w=ctx.measureText(label).width+28;ctx.fillStyle='#06101bd9';ctx.fillRect(-w/2,-16,w,25);ctx.fillStyle='#efd6a0';ctx.fillText(label,0,1);ctx.restore();
+    }else{const theme=this.mapArt.draw(ctx,mapItem?themeFor(mapItem).map*10+1:game.round||1,this.clock,!!mapItem);this.mapArt.drawRoad(ctx,theme);}
     ctx.textAlign = 'center';
     for (const m of board.monsters) {
       const old = previousMonsters.get(m.id) || m;
@@ -126,13 +138,15 @@ export class ArenaRenderer {
       this.positions.set(m.id, { x, y: y - 8 });
       this.monsterVisuals.drawMonster(ctx, m, boardIndex, x, y, this.clock, m.id === selectedEnemy);
     }
-    this.monsterVisuals.drawDeaths(ctx, boardIndex, this.clock);
+    if(quality.world)this.monsterVisuals.drawDeaths(ctx, boardIndex, this.clock);
+    if(quality.world)this.cosmetics.deaths(ctx,game,boardIndex,position);
     const owners = boardOwners(game,boardIndex);
     for (const owner of owners) for (const original of owner.champions) {
       const old = previousHeroes.get(original.id) || original;
       const c = { ...original, x: old.x + (original.x - old.x) * blend, y: old.y + (original.y - old.y) * blend };
       this.positions.set(c.id, { x: c.x, y: c.y - (this.art.ready ? 23 : 0) });
       const type = CHAMPIONS[c.base].type, color = elementColors[type];
+      if(quality.world)this.cosmetics.summon(ctx,c,owner,this.clock);
       if (c.id === selected || selectedIds.includes(c.id)) {
         ctx.fillStyle = '#b9f66d0a'; ctx.strokeStyle = '#b9f66d55'; ctx.lineWidth = 1;
         ctx.beginPath(); ctx.arc(c.x, c.y, stats(c).range / game.mapScale, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
@@ -150,15 +164,15 @@ export class ArenaRenderer {
       const ally = false;
       if (this.art.ready) this.drawCharacterSprite(ctx, c, type, ally);
       else { ctx.save(); if (ally) ctx.filter = 'grayscale(1) brightness(.72)'; this.drawChampion(ctx, c.x, c.y, type, ally ? '#8b9290' : color); ctx.restore(); }
-      if (c.tier >= 4) {
+      if (quality.world && c.tier >= 4) {
         ctx.strokeStyle = COLORS[c.tier] + '66'; ctx.lineWidth = 1;
         ctx.beginPath(); ctx.arc(c.x, c.y, 24 + Math.sin(seconds * 3) * 2, 0, Math.PI * 2); ctx.stroke();
       }
-      ctx.fillStyle = COLORS[c.tier];
-      for (let i = 0; i <= c.tier; i++) ctx.fillRect(c.x - c.tier * 3 + i * 6 - 1.5, c.y + 26, 3, 3);
+      ctx.save();ctx.translate(c.x,c.y);ctx.scale(1,1/this.verticalScale);ctx.textAlign='center';ctx.font='bold 11px sans-serif';ctx.strokeStyle='#07101d';ctx.lineWidth=3;const stars='★'.repeat(Math.max(1,Math.min(7,c.tier+1)));ctx.strokeText(stars,0,-65);ctx.fillStyle='#ffda78';ctx.fillText(stars,0,-65);ctx.restore();
       {
         ctx.save();ctx.translate(c.x,c.y+32);ctx.scale(1,1/this.verticalScale);ctx.font='bold 11px sans-serif';const name=CHAMPIONS[c.base].name;const labelWidth=ctx.measureText(name).width+10;ctx.fillStyle='#03101ee8';ctx.fillRect(-labelWidth/2,-12,labelWidth,16);ctx.strokeStyle='#00101b';ctx.lineWidth=3;ctx.strokeText(name,0,0);ctx.fillStyle='#f5f7ff';ctx.fillText(name,0,0);ctx.restore();
-        drawBlessingBadges(ctx,c,game.time,this.verticalScale,this.blessingFrame,this.clock);
+        if(c.bossDebuff?.until>game.time){ctx.save();ctx.translate(c.x,c.y-52);ctx.scale(1,1/this.verticalScale);ctx.font='bold 11px sans-serif';ctx.textAlign='center';const label={stun:'✦ 스턴',weaken:'▼ 피해 -30%',slow:'▼ 이동 -50%'}[c.bossDebuff.kind];const w=ctx.measureText(label).width+12;ctx.fillStyle='#24101fee';ctx.fillRect(-w/2,-12,w,18);ctx.fillStyle='#ffb3c2';ctx.fillText(label,0,1);ctx.restore();}
+        drawBlessingBadges(ctx,c,game.time,this.verticalScale,quality.champion?this.blessingFrame:null,this.clock,quality.champion);
       }
 
     }
@@ -166,8 +180,8 @@ export class ArenaRenderer {
       const x=Math.min(dragStart.x,dragNow.x), y=Math.min(dragStart.y,dragNow.y), w=Math.abs(dragNow.x-dragStart.x), h=Math.abs(dragNow.y-dragStart.y);
       ctx.save(); ctx.fillStyle='#b9f66d18'; ctx.strokeStyle='#d4fba1'; ctx.lineWidth=2; ctx.setLineDash([8,5]); ctx.fillRect(x,y,w,h); ctx.strokeRect(x,y,w,h); ctx.setLineDash([]); ctx.restore();
     }
-    if (this.art.ready) this.drawImageEffects(ctx, boardIndex);
-    for (const e of (this.art.ready ? [] : game.effects.filter(e => e.board === boardIndex).slice(-100))) {
+    if (quality.champion && this.art.ready) this.drawImageEffects(ctx, boardIndex);else if(!quality.champion)this.visualEffects=[];
+    for (const e of (this.art.ready || !quality.champion ? [] : game.effects.filter(e => e.board === boardIndex).slice(-100))) {
       const elapsed = Math.max(0, game.time - (e.born || game.time) + blend * 0.08);
       const fade = Math.max(0, 1 - elapsed / 0.3);
       if (!fade) continue;
@@ -181,9 +195,10 @@ export class ArenaRenderer {
     }
     ctx.fillStyle = board.monsters.length >= 75 ? '#ffa99b' : '#b3c4b2'; ctx.font = '11px monospace';
     ctx.fillText(`${monsterCount(game,board)} HOSTILES / ${board.spawn.length} INCOMING`, 400, 27);
-    this.championSkillVisuals.draw(ctx,game,boardIndex,this.verticalScale,this.positions,position);
-    this.bossVisuals.draw(ctx,game,board,owners,this.positions,this.verticalScale,position);
-    ctx.textAlign = 'left';
+    if(quality.champion)this.championSkillVisuals.draw(ctx,game,boardIndex,this.verticalScale,this.positions,position);
+    if(quality.world)for(const boss of board.monsters){const hit=boss.basicAttack;if(!hit||hit.until<=game.time)continue;const from=position(boss.p,boss);ctx.save();ctx.globalAlpha=Math.max(0,(hit.until-game.time)/.3);ctx.strokeStyle=hit.kind==='stun'?'#ffe18a':hit.kind==='slow'?'#86d8ff':'#f788a4';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(from.x,from.y-35);ctx.lineTo(hit.x,hit.y-15);ctx.stroke();ctx.beginPath();ctx.arc(hit.x,hit.y-15,12+(game.time-hit.born)*30,0,Math.PI*2);ctx.stroke();ctx.restore();}
+    this.bossVisuals.sounds(game,board);if(quality.world)this.bossVisuals.draw(ctx,game,board,owners,this.positions,this.verticalScale,position);
+    ctx.textAlign = 'left';return true;
   }
   drawCharacterSprite(ctx, c, type, ally = false) {
     const attack = this.attacks.get(c.id);
@@ -205,17 +220,17 @@ export class ArenaRenderer {
     }
     ctx.save(); ctx.translate(c.x + dx, c.y + dy + bob); ctx.rotate(rotation); ctx.scale(facing, 1 / (this.verticalScale || 1));
     const tint = 0;
-    ctx.filter = ally ? 'grayscale(1) brightness(.72)' : `hue-rotate(${tint}deg) saturate(${1 + c.tier * 0.045})`;
+    ctx.filter = !graphics().world?'none':ally ? 'grayscale(1) brightness(.72)' : `hue-rotate(${tint}deg) saturate(${1 + c.tier * 0.045})`;
     const frames=this.art.attackFrames[type];
     const walkingFrame=moving?this.art.walkFrames[type]?.[walk.frame]:null;
-    const frame=walkingFrame||frames?.[!moving&&c.combatState!=='fear'&&age>=0&&age<duration?Math.min(7,Math.floor(age/duration*8)):7]||this.art.characters[type];
+    const frame=walkingFrame||frames?.[!moving&&c.combatState!=='fear'&&c.combatState!=='stunned'&&age>=0&&age<duration?Math.min(7,Math.floor(age/duration*8)):7]||this.art.characters[type];
     // Match the idle character's height, independent of each sheet's transparent padding.
     const idle=frames?.[7];
     const reference=walkingFrame||idle||frame;
     const height=reference.bodyHeight?58*reference.height/reference.bodyHeight:80;
     const width=height*frame.width/frame.height;ctx.drawImage(frame,-width/2,frame.anchorY ? -height*frame.anchorY+12 : 12-height*.9,width,height);
     ctx.filter = 'none'; ctx.restore();
-    if (!moving && phase > 0 && type >= 3 && type <= 7) {
+    if (graphics().champion && !moving && phase > 0 && type >= 3 && type <= 7) {
       ctx.save(); ctx.globalCompositeOperation = 'screen'; ctx.globalAlpha = phase * 0.5;
       ctx.drawImage(this.art.effects[type], c.x - 23, c.y - 37, 46, 46); ctx.restore();
     }
@@ -230,7 +245,7 @@ export class ArenaRenderer {
       const target = this.positions.get(e.target);
       const tx = target?.x ?? e.tx, ty = target?.y ?? e.ty;
       const angle = Math.atan2(ty - e.y, tx - e.x);
-      const melee = [2,11,12].includes(type);
+      const melee = [2,11,12,15,16,18].includes(type);
       const travel = melee ? 0.05 : Math.min(.32,Math.max(.14,Math.hypot(tx-e.x,ty-e.y)/(type===0?1500:950)));
       ctx.save(); ctx.globalCompositeOperation = 'screen';
       if (!melee && age < travel) {
@@ -312,9 +327,9 @@ export function advanceWalk(previous,c,clock,status,verticalScale=1){
 }
 
 // Name baseline is y+32. Badge rows begin below the name, with unscaled readable text.
-export function drawBlessingBadges(ctx,c,time,verticalScale=1,frame,clock=0){
+export function drawBlessingBadges(ctx,c,time,verticalScale=1,frame,clock=0,decorative=true){
  const buffs=Object.entries(c.supportBuffs||{}).filter(([,b])=>b.until>time);if(!buffs.length)return;
- ctx.save();ctx.strokeStyle=buffs.some(([k])=>k==='damage')?'#ffe48b':'#89edff';ctx.lineWidth=2;ctx.globalAlpha=.65+.15*Math.sin(clock*3);ctx.beginPath();ctx.ellipse(c.x,c.y+12,26,11,0,0,Math.PI*2);ctx.stroke();ctx.restore();
+ if(decorative){ctx.save();ctx.strokeStyle=buffs.some(([k])=>k==='damage')?'#ffe48b':'#89edff';ctx.lineWidth=2;ctx.globalAlpha=.65+.15*Math.sin(clock*3);ctx.beginPath();ctx.ellipse(c.x,c.y+12,26,11,0,0,Math.PI*2);ctx.stroke();ctx.restore();}
  ctx.save();ctx.translate(c.x,c.y+32);ctx.scale(1,1/verticalScale);ctx.textAlign='center';ctx.textBaseline='middle';ctx.font='bold 9px sans-serif';
  buffs.forEach(([kind,b],i)=>{const y=8+i*21,color=kind==='damage'?'#ffe7a0':'#9bf2ff';
  if(frame?.complete&&frame.naturalWidth){ctx.save();if(kind==='speed')ctx.filter='hue-rotate(145deg)';ctx.drawImage(frame,frame.naturalWidth*.025,frame.naturalHeight*.26,frame.naturalWidth*.95,frame.naturalHeight*.42,-57,y,114,21);ctx.restore();}else{ctx.fillStyle='#071729';ctx.fillRect(-54,y+2,108,17);ctx.strokeStyle=color;ctx.strokeRect(-54,y+2,108,17);}
@@ -323,8 +338,10 @@ export function drawBlessingBadges(ctx,c,time,verticalScale=1,frame,clock=0){
 }
 
 export function projectileCell(type,progress,width,height){
- const row=({0:0,1:1,3:2,4:3,5:4,6:5,7:6,8:3,10:7,13:5,14:0})[type]??0;
+ const row=({0:0,1:1,3:2,4:3,5:4,6:5,7:6,8:3,10:7,13:5,14:0,17:1,19:2})[type]??0;
  const edges=[0,.155,.285,.411,.538,.657,.779,.895,1];
  const frame=Math.min(7,Math.max(0,Math.floor(progress*8)));
  return [edges[frame]*width,row*height/8,(edges[frame+1]-edges[frame])*width,height/8];
 }
+
+const drawArena=ArenaRenderer.prototype.draw;ArenaRenderer.prototype.draw=function(canvas,boardIndex,...args){const drawn=drawArena.call(this,canvas,boardIndex,...args);if(drawn&&graphics().world&&canvas&&this.current?.boards[boardIndex])this.cosmetics.victory(canvas.getContext('2d'),this.current,this.current.players[boardIndex],this.clock);};

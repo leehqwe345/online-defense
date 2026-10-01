@@ -1,3 +1,4 @@
+import {productById} from './cosmetics.js';
 import {openAccountStore,AccountError,normalizedNickname} from './account-store.mjs';
 import {loadEnvFile} from 'node:process';
 
@@ -56,12 +57,16 @@ async function verifyGoogle(token){
   }
 
   if(Date.now()>keyUntil){
-    const r=await fetch(
-      'https://www.googleapis.com/oauth2/v3/certs'
-    );
+    let r;
+    try{
+      r=await fetch('https://www.googleapis.com/oauth2/v3/certs',{signal:AbortSignal.timeout(10000)});
+    }catch(error){
+      console.error('Google certificate connection failed:',error.cause?.code||error.name);
+      throw Object.assign(Error('Google 인증 서버에 연결하지 못했습니다. 잠시 후 다시 로그인하세요.'),{code:'GOOGLE_UNAVAILABLE'});
+    }
 
     if(!r.ok){
-      throw Error('Google 인증 서버 오류');
+      throw Object.assign(Error('Google 인증 서버 오류'),{code:'GOOGLE_UNAVAILABLE'});
     }
 
     keys=(await r.json()).keys;
@@ -110,7 +115,7 @@ function summary(r){
     players:r.users.map(u=>({
       id:u.id,
       name:u.name,
-      lobbyCard:u.lobbyCard??0
+      lobbyCard:u.lobbyCard??0,cosmetics:u.cosmetics||{}
     })),
 
     host:r.users[0]?.id,
@@ -159,6 +164,7 @@ function leave(user){
 
   user.room=null;
 
+  persistDiamonds(r);
   if(!r.users.length){
     if(
       r.game?.status==='ended' &&
@@ -174,7 +180,7 @@ function leave(user){
       r.cancelled ||
       r.recorded
     ){
-      rooms.delete(r.id);
+      if(!r.game?.diamondRewards?.length&&!r.rewardSaving)rooms.delete(r.id);
     }
   }else{
     send(r);
@@ -312,10 +318,11 @@ const server=http.createServer(
             );
           }
 
-          const c=
-            await verifyGoogle(
-              body.credential
-            );
+          let c;
+          try{c=await verifyGoogle(body.credential);}catch(error){
+            const unavailable=error.code==='GOOGLE_UNAVAILABLE';
+            return json(res,unavailable?503:401,{error:unavailable?'Google 인증 서버에 연결하지 못했습니다. 잠시 후 다시 로그인하세요.':'Google 인증을 확인하지 못했습니다. 다시 로그인하세요.'});
+          }
 
           uid='g_'+c.sub;
           google=true;
@@ -352,6 +359,7 @@ const server=http.createServer(
 
           lobbyCard:
             profile.lobbyCard??0,
+          cosmetics:(await accountStore.cosmetics(uid)).equipped,
 
           seen:Date.now(),
           room:null
@@ -387,7 +395,25 @@ const server=http.createServer(
         );
       }
 
-      if(url.pathname==='/api/me'){
+      if(url.pathname.startsWith('/api/cosmetics')){
+ if(!user?.google)return json(res,401,{error:'먼저 로그인하세요.'});
+ if(url.pathname==='/api/cosmetics'&&req.method==='GET')return json(res,200,await accountStore.cosmetics(user.id));
+ if(req.method!=='POST')return json(res,405,{error:'지원하지 않는 요청입니다.'});
+ let result;
+ if(url.pathname==='/api/cosmetics/purchase')result=await accountStore.purchaseCosmetic(user.id,body.item);
+ else if(url.pathname==='/api/cosmetics/equip')result=await accountStore.equipCosmetic(user.id,body.slot,body.item);
+ else return json(res,404,{error:'상품 기능을 찾을 수 없습니다.'});
+ user.cosmetics=result.equipped;
+ const activeRoom=rooms.get(user.room);if(activeRoom){const p=activeRoom.game?.players.find(p=>p.id===user.id);if(p)p.cosmetics=result.equipped;send(activeRoom);}
+ return json(res,200,result);
+}
+if(url.pathname==='/api/wallet'){
+
+ if(!user?.google)return json(res,401,{error:'먼저 로그인하세요.'});
+ return json(res,200,{diamonds:await accountStore.diamonds(user.id)});
+}
+if(url.pathname==='/api/me'){
+
         return json(
           res,
           200,
@@ -857,7 +883,9 @@ const server=http.createServer(
           );
         }
 
-        const text=
+        const emote=body.emote?productById(body.emote):null;
+        if(body.emote&&(!emote||emote.slot!=='emote'||user.cosmetics?.emote!==emote.id))return json(res,403,{error:'장착한 이모티콘만 사용할 수 있습니다.'});
+        const text=emote?emote.name:
           typeof body.text===
             'string'
             ?body.text.trim()
@@ -900,6 +928,7 @@ const server=http.createServer(
           {
             name:user.name,
             text,
+            emote:emote?.id,
             at:Date.now()
           }
         ].slice(-50);
@@ -1120,6 +1149,23 @@ const server=http.createServer(
       }
 
       const staticFiles={
+ '/assets/map-citadel-default-v1.png':'assets/map-citadel-default-v1.png',
+ '/assets/map-citadel-forest-v1.png':'assets/map-citadel-forest-v1.png',
+ '/assets/map-citadel-frost-v1.png':'assets/map-citadel-frost-v1.png',
+ '/assets/map-citadel-ember-v1.png':'assets/map-citadel-ember-v1.png',
+ '/assets/map-citadel-arcane-v1.png':'assets/map-citadel-arcane-v1.png',
+ '/assets/map-citadel-ocean-v1.png':'assets/map-citadel-ocean-v1.png',
+ '/assets/map-citadel-royal-v1.png':'assets/map-citadel-royal-v1.png',
+ '/roster-sort.js':'roster-sort.js',
+ '/assets/boss-attacks-a-v1.png':'assets/boss-attacks-a-v1.png',
+ '/assets/boss-attacks-b-v1.png':'assets/boss-attacks-b-v1.png',
+ '/assets/boss-attacks-c-v1.png':'assets/boss-attacks-c-v1.png',
+        '/assets/boss-arena-citadel-v1.png':'assets/boss-arena-citadel-v1.png',
+        '/assets/monster-hit-materials-v1.png':'assets/monster-hit-materials-v1.png',
+        '/assets/boss-damage-stages-v1.png':'assets/boss-damage-stages-v1.png',
+        '/assets/wardrobe-hall-v1.png':'assets/wardrobe-hall-v1.png',
+ '/assets/battle-buttons-v2.png':'assets/battle-buttons-v2.png','/assets/battle-frame-v2.png':'assets/battle-frame-v2.png','/assets/world-boss-banner-v2.png':'assets/world-boss-banner-v2.png','/assets/battle-hud-v3.png':'assets/battle-hud-v3.png','/assets/boss-colossus-v1.png':'assets/boss-colossus-v1.png','/assets/boss-jade-v2.png':'assets/boss-jade-v2.png','/assets/boss-ember-v2.png':'assets/boss-ember-v2.png','/assets/boss-expansion-v1.png':'assets/boss-expansion-v1.png','/assets/boss-arrival-a.png':'assets/boss-arrival-a.png','/assets/boss-arrival-b.png':'assets/boss-arrival-b.png','/assets/upgrade-shop-v2.png':'assets/upgrade-shop-v2.png','/cosmetic-art.js':'cosmetic-art.js','/assets/cosmetic-effects-v3.png':'assets/cosmetic-effects-v3.png','/assets/cosmetic-ornaments-v3.png':'assets/cosmetic-ornaments-v3.png','/assets/cosmetic-emotes-v3.png':'assets/cosmetic-emotes-v3.png','/assets/cosmetic-effects-v2.png':'assets/cosmetic-effects-v2.png','/assets/cosmetic-ornaments-v2.png':'assets/cosmetic-ornaments-v2.png','/assets/cosmetic-emotes-v2.png':'assets/cosmetic-emotes-v2.png',
+ '/cosmetics.js':'cosmetics.js','/shop-ui.js':'shop-ui.js','/cosmetics.css':'cosmetics.css','/cosmetic-effects.js':'cosmetic-effects.js',
         '/auth.css':
           'auth.css',
 
@@ -1237,6 +1283,7 @@ const server=http.createServer(
           )
         ),
 
+        ...Object.fromEntries(Array.from({length:5},(_,i)=>['/assets/champion-'+(15+i)+'-motion-v1.png','assets/champion-'+(15+i)+'-motion-v1.png'])),
         '/assets/champion-0-attack-v1.png':
           'assets/champion-0-attack-v1.png',
 
@@ -1297,6 +1344,9 @@ const server=http.createServer(
         '/app.js':
           'app.js',
 
+        '/quests.js':'quests.js',
+        '/encounters.js':'encounters.js',
+        '/graphics-settings.js':'graphics-settings.js',
         '/engine.js':
           'engine.js',
 
@@ -1463,6 +1513,7 @@ const gameTimer=setInterval(
         }
       }
 
+      persistDiamonds(r);
       send(r);
 
       if(
@@ -1475,7 +1526,7 @@ const gameTimer=setInterval(
           r.recorded
         )
       ){
-        rooms.delete(r.id);
+        if(!r.game?.diamondRewards?.length&&!r.rewardSaving)rooms.delete(r.id);
       }
     }
 
@@ -1503,6 +1554,7 @@ server.listen(
 );
 
 function persistBattle(r){
+  persistDiamonds(r);
   r.recording=true;
 
   const g=r.game;
@@ -1582,6 +1634,7 @@ async function shutdown(){
   );
 
   for(const r of rooms.values()){
+    persistDiamonds(r);
     if(
       r.game?.status==='ended' &&
       !r.cancelled &&
@@ -1610,3 +1663,10 @@ process.once(
   'SIGINT',
   shutdown
 );
+function persistDiamonds(r){
+ const rewards=r.game?.diamondRewards||[];
+ if(!rewards.length||r.rewardSaving||Date.now()<(r.rewardRetryAt||0))return;
+ const batch=rewards.slice();r.rewardSaving=true;
+ const job=accountStore.grantDiamonds(r.battleId,batch).then(()=>{rewards.splice(0,batch.length);}).catch(()=>{r.rewardRetryAt=Date.now()+5000;console.error('Diamond reward save failed; retry pending');}).finally(()=>{r.rewardSaving=false;pendingResults.delete(job);});
+ pendingResults.add(job);return job;
+}

@@ -1,0 +1,1 @@
+Built-in image_gen: dark navy fantasy workshop, blue summoning crystal altar on left and amber blacksmith anvil on right, empty dark text space, no text. Asset: assets/upgrade-shop-v2.png.

@@ -1,0 +1,17 @@
+✔ browser entry points and modules parse successfully (425.5227ms)
+✔ a lethal hit preserves its target and death pose once, without delaying rewards or waves (2.757ms)
+✔ resisted damage still produces a hurt reaction (0.8835ms)
+✔ poison deaths and co-op boss deaths retain visuals with correct individual rewards (0.7422ms)
+✔ AoE keeps every death and versus death events stay on their own board (0.3827ms)
+✔ final-wave kill retains its death animation after victory (0.157ms)
+✔ repeated network packets never restart death animation, and render time controls expiry (0.3389ms)
+✔ rapid hit packets cannot endlessly postpone reactions; removed targets release hit state (0.1562ms)
+✔ the ten normal families and alternating ten-round bosses select distinct atlas cells (0.1254ms)
+ℹ tests 9
+ℹ suites 0
+ℹ pass 9
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 476.019

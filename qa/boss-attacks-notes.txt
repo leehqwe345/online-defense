@@ -1,0 +1,7 @@
+생성 도구: built-in image_gen, 투명 PNG
+assets/boss-attacks-a-v1.png: 비취 수호자, 홍염군주 · 4열2행
+assets/boss-attacks-b-v1.png: 빙하군왕,크라켄,사자왕,망령룡,미노타우로스,그리핀 · 4열6행
+assets/boss-attacks-c-v1.png: 거미여왕,전갈황제,심판자,삼두늑대,불사조,레비아탄 · 4열6행
+프롬프트 공통: Transparent game attack sprite atlas exactly FOUR columns, equal cells, matching reference boss identity colors armor. Each row same creature in FOUR distinct attack poses: windup, strike, followthrough, recover. Full body fixed scale, feet baseline, transparent margins. No text grid ground background. Detailed premium fantasy sprites.
+동작: 나무/화염 발톱, 얼음곰 내려치기, 촉수 휘두르기, 사자발톱, 용브레스, 도끼베기, 날개치기, 거미공격, 꼬리찌르기, 검베기, 삼두물기, 불사조날개, 레비아탄돌진.
+검증: 합성쌍 등급내 우선정렬 및 보스14종4프레임 매핑. 전체161테스트 통과.

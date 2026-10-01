@@ -1,0 +1,1 @@
+Built-in image_gen: ultra-wide burgundy world-boss alert strip, crimson glowing rim, restrained gold corners, transparent exterior, no text or icons. Saved: assets/world-boss-banner-v2.png. Text and live HP rendered separately.

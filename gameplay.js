@@ -22,11 +22,12 @@ export function formationPosition(index) {
 }
 
 export function controlAction(game, player, request) {
-  if (request.type === 'autoApproach') {
+  if (request.type === 'autoApproach' && request.enabled !== false) return '자동 접근은 삭제되었습니다. 우클릭으로 이동하세요.';
+  if (request.type === 'hold' || request.type === 'autoApproach') {
     const ids=Array.isArray(request.ids)?request.ids:[request.id];
     const champions=player.champions.filter(c=>ids.includes(c.id));
-    if (!champions.length || typeof request.enabled !== 'boolean') return '챔피언을 선택하세요.';
-    for(const champion of champions){champion.autoApproach=request.enabled;delete champion.approach;delete champion.destination;champion.combatState='waiting';}
+    if (!champions.length) return '챔피언을 선택하세요.';
+    for(const champion of champions){champion.autoApproach=false;delete champion.approach;delete champion.destination;champion.combatState='waiting';}
     return null;
   }
   if (request.type === 'pause') {
@@ -79,7 +80,7 @@ export function stepGame(game, realDelta, tick) {
 
 // Collision applies to all allies sharing a board, but never to separate versus maps.
 export const CHAMPION_SPACING = 44;
-function peers(game,c){const own=game.players.find(p=>p.champions.includes(c));return game.players.flatMap(p=>p.champions.filter(v=>v!==c&&(game.mode==='coop'?(c.world?!!v.world:p===own&&!v.world):game.mode==='versus'?p===own:true)));}
+function peers(game,c){const own=game.players.find(p=>p.champions.includes(c));return game.players.flatMap(p=>p.champions.filter(v=>v!==c&&(game.mode==='coop'?(c.world?!!v.world:p===own&&!v.world):p===own&&!!v.world===!!c.world)));}
 function free(game,c,x,y){return x>=140&&x<=660&&y>=140&&y<=660&&peers(game,c).every(v=>Math.hypot(v.x-x,v.y-y)>=CHAMPION_SPACING-.001);}
 export function placeChampion(game,c,target){
  const x=Math.max(140,Math.min(660,target.x)),y=Math.max(140,Math.min(660,target.y));

@@ -1,0 +1,1 @@
+Built-in image_gen. Buttons: transparent 2x3 atlas, sapphire/purple/gold/ice blue/red/neutral plates, empty text space. Frame: transparent center, thin gold square frame and engraved corners, nine-slice scaling. Files: assets/battle-buttons-v2.png, assets/battle-frame-v2.png.

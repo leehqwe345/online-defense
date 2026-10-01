@@ -1,6 +1,6 @@
 export const MAP_ATLAS = '/assets/battle-terrains-v6.png';
 export const MAPS = [
-  ['이끼숲 경계', '#a7d478', '#33472b'], ['황금 사막', '#edc47c', '#68513b'],
+  ['공중 성채', '#a7d478', '#33472b'], ['황금 사막', '#edc47c', '#68513b'],
   ['빙정 호수', '#a5e7ff', '#345a74'], ['잿불 화산', '#ffad79', '#493632'],
   ['비전 유적', '#c7acff', '#49405f'], ['해무 해안', '#8bdcda', '#305450'],
   ['황혼의 숲', '#ffd18b', '#60462e'], ['심연 동굴', '#bda1ff', '#343052'],
@@ -8,46 +8,14 @@ export const MAPS = [
 ].map(([name, accent, road], index) => ({ name, accent, road, index, first: index * 10 + 1, last: index * 10 + 10 }));
 export function mapForRound(round = 1) { return MAPS[Math.max(0, Math.min(9, Math.floor((round - 1) / 10)))]; }
 
+
+export const CITADEL_MAPS={default:'/assets/map-citadel-default-v1.png',forest:'/assets/map-citadel-forest-v1.png',frost:'/assets/map-citadel-frost-v1.png',ember:'/assets/map-citadel-ember-v1.png',arcane:'/assets/map-citadel-arcane-v1.png',ocean:'/assets/map-citadel-ocean-v1.png',royal:'/assets/map-citadel-royal-v1.png'};
+export const customMapKey=index=>({0:'forest',2:'frost',3:'ember',4:'arcane',5:'ocean',8:'royal'}[index]||'default');
+// Align the generated road centerlines to the simulation's 10% / 90% perimeter.
+export const ROAD_SOURCE_X=[0,.117,.882,1],ROAD_SOURCE_Y=[0,.133,.82,1],ROAD_TARGET=[0,.1,.9,1];
 export class MapArt {
-  constructor() {
-    this.tiles = new Map();this.ruins=new Image();this.ruins.src='/assets/battle-ruins-v1.png';
-    this.image = new Image(); this.image.src = MAP_ATLAS;
-    this.road = new Image(); this.road.src = '/assets/battle-road-v1.png';
-  }
-  terrain(index,width,height) {
-    if (!this.image.complete || !this.image.naturalWidth) return null;
-    const key=index+':'+width+':'+height;
-    if(this.tiles.has(key))return this.tiles.get(key);
-    const tile=document.createElement('canvas');tile.width=width;tile.height=height;
-    const ctx=tile.getContext('2d'),sw=this.image.width/2-6;
-    const edges=[0,320,652,988,1330,1842],row=Math.floor(index/2);
-    const sy=edges[row]/1842*this.image.height+3,sh=(edges[row+1]-edges[row])/1842*this.image.height-6;
-    // Cover in screen pixels: crop excess edges rather than squash the terrain.
-    const scale=Math.max(width/sw,height/sh),cw=width/scale,ch=height/scale;
-    ctx.drawImage(this.image,index%2*this.image.width/2+3+(sw-cw)/2,sy+(sh-ch)/2,cw,ch,0,0,width,height);
-    ctx.fillStyle='#06101328';ctx.fillRect(0,0,width,height);
-    this.tiles.set(key,tile);return tile;
-  }
-  draw(ctx,round,clock) {
-    const theme=mapForRound(round),width=ctx.canvas.width,height=ctx.canvas.height;
-    if(this.active!==theme.index){this.previous=this.active;this.active=theme.index;this.changed=clock;}
-    const tile=this.terrain(theme.index,width,height),old=this.previous===undefined?null:this.terrain(this.previous,width,height);
-    ctx.save();ctx.setTransform(1,0,0,1,0,0);
-    if(this.ruins.complete&&this.ruins.naturalWidth){const scale=Math.max(width/this.ruins.width,height/this.ruins.height),sw=width/scale,sh=height/scale;ctx.drawImage(this.ruins,(this.ruins.width-sw)/2,(this.ruins.height-sh)/2,sw,sh,0,0,width,height);ctx.fillStyle=['#09152908','#ad713212','#3589b91c','#972c251b','#633bb91c','#259a9a14','#ac71311a','#34215825','#cdbf6a0e','#701d2325'][theme.index];ctx.fillRect(0,0,width,height);}else if(tile){const blend=Math.min(1,(clock-this.changed)/.8);if(old&&blend<1){ctx.drawImage(old,0,0);ctx.globalAlpha=blend;}ctx.drawImage(tile,0,0);ctx.globalAlpha=1;}
-    ctx.restore();return theme;
-  }
-  drawRoad(ctx,theme) {
-    const w=ctx.canvas.width,h=ctx.canvas.height,roadWidth=Math.min(w,h)*.075;
-    ctx.save();ctx.setTransform(1,0,0,1,0,0);
-    const path=new Path2D();path.roundRect(w*.1,h*.1,w*.8,h*.8,10);
-    ctx.lineJoin='round';ctx.shadowColor='#000a';ctx.shadowBlur=7;ctx.lineWidth=roadWidth+8;ctx.strokeStyle='#171b18';ctx.stroke(path);ctx.shadowBlur=0;
-    ctx.lineWidth=roadWidth+4;ctx.strokeStyle='#8b8970';ctx.stroke(path);
-    let texture=null;
-    if(this.road.complete&&this.road.naturalWidth){texture=ctx.createPattern(this.road,'repeat');texture.setTransform(new DOMMatrix().scale(.16));}
-    ctx.lineWidth=roadWidth;ctx.strokeStyle=texture||theme.road;ctx.stroke(path);
-    ctx.strokeStyle='#939a9825';ctx.stroke(path);
-    ctx.fillStyle='#fff2c9aa';ctx.font='16px sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';
-    ctx.fillText('→',w*.5,h*.1);ctx.fillText('↓',w*.9,h*.5);ctx.fillText('←',w*.5,h*.9);ctx.fillText('↑',w*.1,h*.5);
-    ctx.restore();
-  }
+ constructor(){this.tiles=new Map();this.images={};for(const [key,src]of Object.entries(CITADEL_MAPS)){const img=new Image();img.src=src;img.addEventListener('load',()=>{this.tiles.clear();if(key!=='default')this.image.dispatchEvent(new Event('load'));});this.images[key]=img;}this.image=this.images.default;this.road=new Image();}
+ terrain(key,width,height){const image=this.images[key];if(!image?.complete||!image.naturalWidth)return null;const cacheKey=key+':'+width+':'+height;if(this.tiles.has(cacheKey))return this.tiles.get(cacheKey);const tile=document.createElement('canvas');tile.width=width;tile.height=height;const c=tile.getContext('2d');for(let y=0;y<3;y++)for(let x=0;x<3;x++){const sx=ROAD_SOURCE_X[x]*image.naturalWidth,sy=ROAD_SOURCE_Y[y]*image.naturalHeight,sw=(ROAD_SOURCE_X[x+1]-ROAD_SOURCE_X[x])*image.naturalWidth,sh=(ROAD_SOURCE_Y[y+1]-ROAD_SOURCE_Y[y])*image.naturalHeight;const dx=Math.round(ROAD_TARGET[x]*width),dy=Math.round(ROAD_TARGET[y]*height),dw=Math.round(ROAD_TARGET[x+1]*width)-dx,dh=Math.round(ROAD_TARGET[y+1]*height)-dy;c.drawImage(image,sx,sy,sw,sh,dx,dy,dw,dh);}if(this.tiles.size>=4)this.tiles.delete(this.tiles.keys().next().value);this.tiles.set(cacheKey,tile);return tile;}
+ draw(ctx,round,clock,custom=false){const theme=mapForRound(round),w=ctx.canvas.width,h=ctx.canvas.height,key=custom?customMapKey(theme.index):'default';const tile=this.terrain(key,w,h);ctx.save();ctx.setTransform(1,0,0,1,0,0);ctx.fillStyle='#101c29';ctx.fillRect(0,0,w,h);if(tile)ctx.drawImage(tile,0,0);if(!custom){ctx.fillStyle=['#09152900','#ad713212','#3589b91c','#972c251b','#633bb91c','#259a9a14','#ac71311a','#34215825','#cdbf6a0e','#701d2325'][theme.index];ctx.fillRect(0,0,w,h);}ctx.restore();return theme;}
+ drawRoad(ctx){const w=ctx.canvas.width,h=ctx.canvas.height;ctx.save();ctx.setTransform(1,0,0,1,0,0);ctx.fillStyle='#fff2c999';ctx.font=Math.max(10,Math.min(w,h)*.021)+'px sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('→',w*.5,h*.1);ctx.fillText('↓',w*.9,h*.5);ctx.fillText('←',w*.5,h*.9);ctx.fillText('↑',w*.1,h*.5);ctx.restore();}
 }

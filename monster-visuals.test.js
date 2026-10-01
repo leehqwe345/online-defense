@@ -48,7 +48,7 @@ test('poison deaths and co-op boss deaths retain visuals with correct individual
 });
 
 test('AoE keeps every death and versus death events stay on their own board', () => {
-  const game = fixture('versus'), base = game.boards[0].monsters[0]; hero(game, 4, 4);
+  const game = fixture('versus'), base = game.boards[0].monsters[0]; hero(game, 4, 6);
   game.boards[0].monsters = Array.from({ length: 6 }, () => ({ ...base, id: game.nextId++, hp: 1, defenses: [] }));
   const opponent = game.boards[1].monsters[0]; tick(game, 0.05);
   assert.equal(game.deaths.length, 6); assert.equal(new Set(game.deaths.map(m => m.id)).size, 6);

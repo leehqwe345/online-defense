@@ -1,0 +1,9 @@
+import {THEMES,themeFor} from './cosmetics.js';
+export const COSMETIC_ATLASES={effects:{src:'/assets/cosmetic-effects-v3.png',cols:4,rows:6},ornaments:{src:'/assets/cosmetic-ornaments-v3.png',cols:3,rows:6},emotes:{src:'/assets/cosmetic-emotes-v3.png',cols:3,rows:2}};
+export function cosmeticTile(p){const row=Math.max(0,THEMES.findIndex(t=>t.id===p?.theme));if(p?.slot==='emote')return {...COSMETIC_ATLASES.emotes,col:row%3,row:Math.floor(row/3)};const effect=['entry','summon','kill','victory'].indexOf(p?.slot);if(effect>=0)return {...COSMETIC_ATLASES.effects,col:effect,row};const ornament=['frame','nameplate','title'].indexOf(p?.slot);return ornament>=0?{...COSMETIC_ATLASES.ornaments,col:ornament,row}:null;}
+export function cosmeticRect(tile){const r={x:tile.col/tile.cols,y:tile.row/tile.rows,w:1/tile.cols,h:1/tile.rows};if(tile.src===COSMETIC_ATLASES.ornaments.src&&tile.col>0){r.y+=r.h*.30;r.h*=.40;}return r;}
+export function cosmeticArtMarkup(p,className=''){const tile=cosmeticTile(p);if(!tile)return '';const r=cosmeticRect(tile);return `<span aria-hidden="true" class="cos-art ${className}" style="--art-url:url('${tile.src}');--art-size:${100/r.w}% ${100/r.h}%;--art-pos:${r.x/(1-r.w)*100}% ${r.y/(1-r.h)*100}%;--cos-color:${themeFor(p).color}"></span>`;}
+export class CosmeticArt{
+ constructor(){this.images=new Map();for(const atlas of Object.values(COSMETIC_ATLASES)){const image=new Image();image.src=atlas.src;this.images.set(atlas.src,image);}}
+ draw(ctx,p,x,y,w,h,alpha=1,rotation=0){const tile=cosmeticTile(p),image=tile&&this.images.get(tile.src);if(!image?.complete||!image.naturalWidth)return false;const r=cosmeticRect(tile),sw=image.naturalWidth*r.w,sh=image.naturalHeight*r.h;ctx.save();ctx.translate(x,y);ctx.rotate(rotation);ctx.globalAlpha=Math.max(0,Math.min(1,alpha));ctx.drawImage(image,r.x*image.naturalWidth,r.y*image.naturalHeight,sw,sh,-w/2,-h/2,w,h);ctx.restore();return true;}
+}

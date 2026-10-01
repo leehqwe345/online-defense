@@ -1,0 +1,4 @@
+도구: built-in image_gen
+파일: assets/boss-arena-citadel-v1.png
+프롬프트: Create the actual clean game background asset matching the approved boss arena concept closely. Wide landscape 16:9. Remove all characters, central boss and heroes. Preserve floating ruined gothic citadel over dark blue mist abyss, charcoal stone floor, warm braziers, gold engraving, four cyan summoning circles near corners. Broad flat walkable floor spanning x15–85%, y17–83%. Central red boss summoning circle at x50%, y45%, flush with floor without surrounding tall pillars. Exterior architecture only at perimeter. Uncluttered space for20 units. No text, UI, healthbars, logos or equipment.
+적용: renderer.js 보스방 전용 배경. 일반 맵 변경 없음. 전체 테스트159개 통과.
