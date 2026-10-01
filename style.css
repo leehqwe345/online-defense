@@ -74,3 +74,23 @@ body.battle-mode{background:radial-gradient(ellipse at 40% 20%,#122637,#030a11 7
 .battle-fullscreen-announcement{position:fixed;inset:0;z-index:10000;display:grid;place-items:center;pointer-events:none;background:radial-gradient(ellipse,#0b294bbb,#020812bb);backdrop-filter:blur(2px);text-align:center;padding:24px;animation:battleAnnounce .3s ease-out}.battle-fullscreen-announcement>div{width:min(100%,1100px);padding:48px 20px;border-block:1px solid #99d7ff77;background:linear-gradient(90deg,transparent,#082e53cc,transparent)}.battle-fullscreen-announcement small{display:block;letter-spacing:6px;color:#98d8ff;font-size:14px}.battle-fullscreen-announcement strong{display:block;margin:22px 0;color:#fff3c2;text-shadow:0 0 30px #ffc44c88;font-size:clamp(28px,5vw,70px);line-height:1.25}.battle-fullscreen-announcement strong:is(:last-child){font-size:90px}.battle-fullscreen-announcement p{font-size:clamp(14px,2vw,23px);color:#d1e6f8;line-height:1.7}.battle-fullscreen-announcement.boss{background:radial-gradient(ellipse,#511c31cc,#100510cc)}.battle-fullscreen-announcement.boss small{color:#ffae85}@keyframes battleAnnounce{from{opacity:0;transform:scale(1.06)}to{opacity:1;transform:scale(1)}}@media(prefers-reduced-motion:reduce){.battle-fullscreen-announcement{animation:none;backdrop-filter:none}}
 .battle-fullscreen-announcement.countdown strong{font-size:clamp(100px,19vw,240px);font-weight:900;letter-spacing:8px}.battle-fullscreen-announcement.countdown>div{background:radial-gradient(circle,#24558655,transparent 65%);border:0}
 .fixed-speed{display:inline-flex;align-items:center;gap:8px;padding:14px;color:#ffe199;font-size:24px;font-weight:800;white-space:nowrap}.fixed-speed small{font-size:11px;color:#9eb4c8}
+
+/* Inferno main menu concept */
+body:not(.battle-mode):not(.lobby-mode):not(.shop-mode){background:#05090e}
+body:not(.battle-mode):not(.lobby-mode):not(.shop-mode) .content{background:radial-gradient(circle at 68% 10%,#45100f55,transparent 34%),linear-gradient(180deg,#071018,#04080d)}
+.hero-inferno{position:relative;overflow:hidden;min-height:405px;border:1px solid #48271f;background:
+linear-gradient(90deg,#05090df2 0%,#070b10b8 35%,#15080840 58%,#17050418 100%),
+radial-gradient(circle at 76% 28%,#ff3b182e,transparent 28%),
+linear-gradient(135deg,#10151a 0%,#250908 55%,#6e120d 100%);box-shadow:inset 0 -80px 100px #030609,0 12px 35px #0008}
+.hero-inferno:after{content:"";position:absolute;inset:0;pointer-events:none;background:
+radial-gradient(circle at 77% 18%,#ff2f1840 0 3%,transparent 14%),
+linear-gradient(112deg,transparent 52%,#ff2d1114 67%,transparent 82%)}
+.hero-inferno .hero-copy{position:relative;z-index:3;max-width:580px;padding:58px 0 45px 12px}
+.hero-inferno .hero-copy h2{font-family:Georgia,"Noto Serif KR",serif;font-size:clamp(42px,4vw,68px);line-height:1.02;letter-spacing:-2px;text-shadow:0 4px 25px #000}
+.hero-inferno .hero-copy h2 em{color:#ff4a2f;font-style:normal;text-shadow:0 0 25px #ff301c33}
+.hero-inferno .badge{color:#e9bc63;letter-spacing:2px}
+.hero-inferno .hero-tags span{color:#f2d48b}
+.hero-inferno .hero-art{position:absolute;z-index:2;right:-15px;top:0;width:68%;height:100%;opacity:.42;mix-blend-mode:screen;filter:sepia(.45) saturate(1.8) hue-rotate(320deg) contrast(1.18)}
+.modes{gap:14px}.mode-card{overflow:hidden;border-color:#34414d;background:linear-gradient(180deg,#111a22,#071018);min-height:180px;box-shadow:inset 0 0 30px #0005}.mode-card:before{content:"";position:absolute;inset:0;background:linear-gradient(135deg,transparent,#b42c1713);pointer-events:none}.mode-card.selected{border-color:#e3b64c;box-shadow:0 0 18px #e4a52e38,inset 0 0 35px #7c3a101d}.mode-card:nth-child(2){background:linear-gradient(160deg,#0b1d30,#071018)}.mode-card:nth-child(3){background:linear-gradient(160deg,#32100d,#090c10);border-color:#63342e}.mode-card:nth-child(3) .mode-icon{color:#ff553d}
+.setup{border-color:#263847}.deploy{position:relative;overflow:hidden;background:radial-gradient(circle at 82% 20%,#b82a1b33,transparent 45%),linear-gradient(135deg,#10151b,#26100e);border-color:#51352e}.deploy .primary{background:linear-gradient(90deg,#ff3829,#ff6840);border-color:#ff7658;color:#150503;box-shadow:0 0 20px #ff3d2730}.deploy .primary:hover{filter:brightness(1.1)}
+@media(max-width:900px){.hero-inferno .hero-art{width:100%;opacity:.2}.hero-inferno .hero-copy{padding-left:0}.hero-inferno .hero-copy h2{font-size:42px}}
