@@ -137,8 +137,11 @@ async function finishEquipmentPointer(e,cancel=false){
  document.querySelectorAll('.equip-drop').forEach(el=>el.classList.remove('equip-drop'));
  if(cancel||!d.active){updateBattle();return;}
  e.preventDefault();e.stopImmediatePropagation();equipmentClickUntil=performance.now()+400;
- const target=document.elementFromPoint(e.clientX,e.clientY),card=target?.closest('[data-roster-id]');
- if(card){const id=Number(card.dataset.rosterId);if(me()?.champions.some(c=>c.id===id)){const ok=await act({type:'equip',id,item:d.id});if(ok){selected=id;selectedIds=[id];selectedItem=null;toast('장비를 장착했습니다.');}}}
+ const target=document.elementFromPoint(e.clientX,e.clientY);
+ // elementFromPoint can land on an overlay/gap inside a roster card. Fall back to the
+ // card's actual bounds so dropping anywhere on the visible character card equips.
+ const card=target?.closest('[data-roster-id]')||[...document.querySelectorAll('[data-roster-id]')].find(el=>{const r=el.getBoundingClientRect();return e.clientX>=r.left&&e.clientX<=r.right&&e.clientY>=r.top&&e.clientY<=r.bottom;});
+ if(card){const id=Number(card.dataset.rosterId);if(me()?.champions.some(c=>c.id===id)&&me()?.items.some(i=>i.id===d.id)){const ok=await act({type:'equip',id,item:d.id});if(ok){selected=id;selectedIds=[id];selectedItem=null;toast('장비를 장착했습니다.');}}}
  else if(target?.closest('#arena')){const pos=canvasPos(e),owner=me(),hero=boardOwners(game,viewBoard).flatMap(p=>p.id===owner?.id?p.champions:[]).find(c=>{const point=arenaRenderer.positions.get(c.id)||c;return Math.hypot(point.x-pos.x,point.y-pos.y)<40;});if(hero)await act({type:'equip',id:hero.id,item:d.id});else requestItemSale(d.id);}
  updateBattle();
 }
