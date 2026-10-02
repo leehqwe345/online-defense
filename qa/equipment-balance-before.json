@@ -1,0 +1,302 @@
+[
+  {
+    "id": 0,
+    "name": "맹공의 무기",
+    "averageImmediateDpsGain": 52.258933511829916
+  },
+  {
+    "id": 1,
+    "name": "신속의 무기",
+    "averageImmediateDpsGain": 97.50310080000017
+  },
+  {
+    "id": 2,
+    "name": "매의 눈의 무기",
+    "averageImmediateDpsGain": 0
+  },
+  {
+    "id": 3,
+    "name": "정밀의 무기",
+    "averageImmediateDpsGain": 27.504244340463494
+  },
+  {
+    "id": 4,
+    "name": "격노의 무기",
+    "averageImmediateDpsGain": 13.554166797385648
+  },
+  {
+    "id": 5,
+    "name": "관통의 무기",
+    "averageImmediateDpsGain": 5.592787988432472
+  },
+  {
+    "id": 6,
+    "name": "비전의 무기",
+    "averageImmediateDpsGain": 8.460563911668945
+  },
+  {
+    "id": 7,
+    "name": "분열의 무기",
+    "averageImmediateDpsGain": 0
+  },
+  {
+    "id": 8,
+    "name": "빙하의 무기",
+    "averageImmediateDpsGain": 0
+  },
+  {
+    "id": 9,
+    "name": "파쇄의 무기",
+    "averageImmediateDpsGain": 0
+  },
+  {
+    "id": 10,
+    "name": "맹공의 장갑",
+    "averageImmediateDpsGain": 52.258933511829916
+  },
+  {
+    "id": 11,
+    "name": "신속의 장갑",
+    "averageImmediateDpsGain": 97.50310080000017
+  },
+  {
+    "id": 12,
+    "name": "매의 눈의 장갑",
+    "averageImmediateDpsGain": 0
+  },
+  {
+    "id": 13,
+    "name": "정밀의 장갑",
+    "averageImmediateDpsGain": 27.504244340463494
+  },
+  {
+    "id": 14,
+    "name": "격노의 장갑",
+    "averageImmediateDpsGain": 13.554166797385648
+  },
+  {
+    "id": 15,
+    "name": "관통의 장갑",
+    "averageImmediateDpsGain": 5.592787988432472
+  },
+  {
+    "id": 16,
+    "name": "비전의 장갑",
+    "averageImmediateDpsGain": 8.460563911668945
+  },
+  {
+    "id": 17,
+    "name": "분열의 장갑",
+    "averageImmediateDpsGain": 0
+  },
+  {
+    "id": 18,
+    "name": "빙하의 장갑",
+    "averageImmediateDpsGain": 0
+  },
+  {
+    "id": 19,
+    "name": "파쇄의 장갑",
+    "averageImmediateDpsGain": 0
+  },
+  {
+    "id": 20,
+    "name": "맹공의 신발",
+    "averageImmediateDpsGain": 52.258933511829916
+  },
+  {
+    "id": 21,
+    "name": "신속의 신발",
+    "averageImmediateDpsGain": 97.50310080000017
+  },
+  {
+    "id": 22,
+    "name": "매의 눈의 신발",
+    "averageImmediateDpsGain": 0
+  },
+  {
+    "id": 23,
+    "name": "정밀의 신발",
+    "averageImmediateDpsGain": 27.504244340463494
+  },
+  {
+    "id": 24,
+    "name": "격노의 신발",
+    "averageImmediateDpsGain": 13.554166797385648
+  },
+  {
+    "id": 25,
+    "name": "관통의 신발",
+    "averageImmediateDpsGain": 5.592787988432472
+  },
+  {
+    "id": 26,
+    "name": "비전의 신발",
+    "averageImmediateDpsGain": 8.460563911668945
+  },
+  {
+    "id": 27,
+    "name": "분열의 신발",
+    "averageImmediateDpsGain": 0
+  },
+  {
+    "id": 28,
+    "name": "빙하의 신발",
+    "averageImmediateDpsGain": 0
+  },
+  {
+    "id": 29,
+    "name": "파쇄의 신발",
+    "averageImmediateDpsGain": 0
+  },
+  {
+    "id": 30,
+    "name": "맹공의 목걸이",
+    "averageImmediateDpsGain": 52.258933511829916
+  },
+  {
+    "id": 31,
+    "name": "신속의 목걸이",
+    "averageImmediateDpsGain": 97.50310080000017
+  },
+  {
+    "id": 32,
+    "name": "매의 눈의 목걸이",
+    "averageImmediateDpsGain": 0
+  },
+  {
+    "id": 33,
+    "name": "정밀의 목걸이",
+    "averageImmediateDpsGain": 27.504244340463494
+  },
+  {
+    "id": 34,
+    "name": "격노의 목걸이",
+    "averageImmediateDpsGain": 13.554166797385648
+  },
+  {
+    "id": 35,
+    "name": "관통의 목걸이",
+    "averageImmediateDpsGain": 5.592787988432472
+  },
+  {
+    "id": 36,
+    "name": "비전의 목걸이",
+    "averageImmediateDpsGain": 8.460563911668945
+  },
+  {
+    "id": 37,
+    "name": "분열의 목걸이",
+    "averageImmediateDpsGain": 0
+  },
+  {
+    "id": 38,
+    "name": "빙하의 목걸이",
+    "averageImmediateDpsGain": 0
+  },
+  {
+    "id": 39,
+    "name": "파쇄의 목걸이",
+    "averageImmediateDpsGain": 0
+  },
+  {
+    "id": 40,
+    "name": "용아검",
+    "averageImmediateDpsGain": 52.716631506811424
+  },
+  {
+    "id": 41,
+    "name": "뇌광창",
+    "averageImmediateDpsGain": 105.0154156708631
+  },
+  {
+    "id": 42,
+    "name": "공허 지팡이",
+    "averageImmediateDpsGain": 38.121807246215994
+  },
+  {
+    "id": 43,
+    "name": "태양궁",
+    "averageImmediateDpsGain": 21.742950130718906
+  },
+  {
+    "id": 44,
+    "name": "흑요석 파쇄추",
+    "averageImmediateDpsGain": 36.58125345828095
+  },
+  {
+    "id": 45,
+    "name": "광전사의 장갑",
+    "averageImmediateDpsGain": 58.681258828005106
+  },
+  {
+    "id": 46,
+    "name": "번개손 장갑",
+    "averageImmediateDpsGain": 77.8900331440716
+  },
+  {
+    "id": 47,
+    "name": "주문술사의 장갑",
+    "averageImmediateDpsGain": 65.83970614788123
+  },
+  {
+    "id": 48,
+    "name": "추적자의 장갑",
+    "averageImmediateDpsGain": 21.742950130718906
+  },
+  {
+    "id": 49,
+    "name": "분쇄자의 장갑",
+    "averageImmediateDpsGain": 4.400530829270832
+  },
+  {
+    "id": 50,
+    "name": "바람깃 신발",
+    "averageImmediateDpsGain": 65.00206719999987
+  },
+  {
+    "id": 51,
+    "name": "서리걸음 신발",
+    "averageImmediateDpsGain": 0
+  },
+  {
+    "id": 52,
+    "name": "그림자 신발",
+    "averageImmediateDpsGain": 76.48183391070695
+  },
+  {
+    "id": 53,
+    "name": "황금 정찰화",
+    "averageImmediateDpsGain": 3.001991643010144
+  },
+  {
+    "id": 54,
+    "name": "대지의 철화",
+    "averageImmediateDpsGain": 31.355360107097955
+  },
+  {
+    "id": 55,
+    "name": "분노의 루비 목걸이",
+    "averageImmediateDpsGain": 48.904008681594405
+  },
+  {
+    "id": 56,
+    "name": "공허석 목걸이",
+    "averageImmediateDpsGain": 6.766447139118041
+  },
+  {
+    "id": 57,
+    "name": "뇌정의 목걸이",
+    "averageImmediateDpsGain": 109.04182304430795
+  },
+  {
+    "id": 58,
+    "name": "서리달 목걸이",
+    "averageImmediateDpsGain": 5.679032108833365
+  },
+  {
+    "id": 59,
+    "name": "태양의 목걸이",
+    "averageImmediateDpsGain": 26.12946675591496
+  }
+]

@@ -107,7 +107,7 @@ export class ArenaRenderer {
     const ratio=canvas.clientWidth&&canvas.clientHeight?canvas.clientHeight/canvas.clientWidth:430/800,pixelRatio=quality.scale,width=Math.round((canvas.clientWidth||800)*pixelRatio),height=Math.round(width*ratio);
     if(canvas.width!==width||canvas.height!==height){canvas.width=width;canvas.height=height;}
     this.verticalScale = ratio;const density=width/800;ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';
-    this.monsterVisuals.verticalScale = this.verticalScale;
+    this.monsterVisuals.verticalScale = this.verticalScale;this.monsterVisuals.animationSpeed=game.speed||2;
     ctx.setTransform(density, 0, 0, density*this.verticalScale, 0, 0);
     const now = performance.now();
     if (game.status !== 'paused') this.clock += Math.min(0.05, (now - this.lastFrame) / 1000);
@@ -164,14 +164,21 @@ export class ArenaRenderer {
       ctx.strokeStyle = COLORS[c.tier] + 'a0'; ctx.lineWidth = (c.id === selected || selectedIds.includes(c.id)) ? 2 : 1;
       ctx.beginPath(); ctx.ellipse(c.x, c.y + 12, 25, 9, 0, 0, Math.PI * 2); ctx.stroke();
       const areaStatus=[['areaStunUntil','기절'],['areaSlowUntil','둔화'],['areaWeakUntil','피해 감소']].find(([key])=>c[key]>game.time);if(areaStatus){ctx.save();ctx.translate(c.x,c.y-90);ctx.scale(1,1/this.verticalScale);ctx.fillStyle='#24080dda';ctx.fillRect(-44,-12,88,22);ctx.fillStyle='#ffb49e';ctx.font='bold 11px sans-serif';ctx.textAlign='center';ctx.fillText(areaStatus[1]+' '+Math.ceil((c[areaStatus[0]]-game.time)/2)+'초',0,3);ctx.restore();}
+      if(quality.world&&c.tier>=3){
+        const enhanced=c.tier>=5,legendary=c.tier===6,radius=enhanced?38:29,pulse=1+Math.sin(this.clock*2.5+c.id)*.06;
+        ctx.save();ctx.translate(c.x,c.y);ctx.scale(1,1/this.verticalScale);ctx.globalCompositeOperation='lighter';
+        const glow=ctx.createRadialGradient(0,-23,5,0,-23,radius*1.3);glow.addColorStop(0,COLORS[c.tier]+(enhanced?'35':'18'));glow.addColorStop(1,COLORS[c.tier]+'00');
+        ctx.fillStyle=glow;ctx.fillRect(-radius*1.4,-23-radius*1.4,radius*2.8,radius*2.8);
+        ctx.strokeStyle=COLORS[c.tier]+(enhanced?'bb':'88');ctx.lineWidth=enhanced?2:1.3;ctx.beginPath();ctx.ellipse(0,12,radius*pulse,10*pulse,0,0,Math.PI*2);ctx.stroke();
+        if(enhanced){ctx.strokeStyle=COLORS[c.tier]+'66';ctx.beginPath();ctx.ellipse(0,12,radius+7,14,0,0,Math.PI*2);ctx.stroke();
+          for(let i=0;i<(legendary?9:6);i++){const angle=this.clock*(legendary?1.3:.9)+i*Math.PI*2/(legendary?9:6),rise=(this.clock*18+i*11)%58;ctx.globalAlpha=(1-rise/58)*.8;ctx.fillStyle=COLORS[c.tier];ctx.beginPath();ctx.arc(Math.cos(angle)*radius*.8,10-rise,legendary?2.2:1.6,0,Math.PI*2);ctx.fill();}
+        }ctx.restore();
+      }
       const ally = false;
       if (this.art.ready) this.drawCharacterSprite(ctx, c, type, ally);
       else { ctx.save(); if (ally) ctx.filter = 'grayscale(1) brightness(.72)'; this.drawChampion(ctx, c.x, c.y, type, ally ? '#8b9290' : color); ctx.restore(); }
-      if (quality.world && c.tier >= 4) {
-        ctx.strokeStyle = COLORS[c.tier] + '66'; ctx.lineWidth = 1;
-        ctx.beginPath(); ctx.arc(c.x, c.y, 24 + Math.sin(seconds * 3) * 2, 0, Math.PI * 2); ctx.stroke();
-      }
-      ctx.save();ctx.translate(c.x,c.y);ctx.scale(1,1/this.verticalScale);ctx.textAlign='center';ctx.font='bold 11px sans-serif';ctx.strokeStyle='#07101d';ctx.lineWidth=3;const stars='★'.repeat(Math.max(1,Math.min(7,c.tier+1)));ctx.strokeText(stars,0,-65);ctx.fillStyle='#ffda78';ctx.fillText(stars,0,-65);ctx.restore();
+
+      ctx.save();ctx.translate(c.x,c.y);ctx.scale(1,1/this.verticalScale);ctx.textAlign='center';const high=c.tier>=4,starColor=['#d5a6ff','#ffbb62','#ff8170'][c.tier-4]||'#ffda78';ctx.font='bold '+(high?16:11)+'px sans-serif';ctx.strokeStyle='#07101d';ctx.lineWidth=high?4:3;const stars=high?'★ '+(c.tier+1)+'성':'★'.repeat(Math.max(1,c.tier+1));ctx.strokeText(stars,0,-65);ctx.fillStyle=starColor;if(high){ctx.shadowColor=starColor;ctx.shadowBlur=c.tier===6?10:6;}ctx.fillText(stars,0,-65);ctx.restore();
       {
         ctx.save();ctx.translate(c.x,c.y+32);ctx.scale(1,1/this.verticalScale);ctx.font='bold 11px sans-serif';const name=CHAMPIONS[c.base].name;const labelWidth=ctx.measureText(name).width+10;ctx.fillStyle='#03101ee8';ctx.fillRect(-labelWidth/2,-12,labelWidth,16);ctx.strokeStyle='#00101b';ctx.lineWidth=3;ctx.strokeText(name,0,0);ctx.fillStyle='#f5f7ff';ctx.fillText(name,0,0);ctx.restore();
         if(c.bossDebuff?.until>game.time){ctx.save();ctx.translate(c.x,c.y-52);ctx.scale(1,1/this.verticalScale);ctx.font='bold 11px sans-serif';ctx.textAlign='center';const label={stun:'✦ 스턴',weaken:'▼ 피해 -30%',slow:'▼ 이동 -50%'}[c.bossDebuff.kind];const w=ctx.measureText(label).width+12;ctx.fillStyle='#24101fee';ctx.fillRect(-w/2,-12,w,18);ctx.fillStyle='#ffb3c2';ctx.fillText(label,0,1);ctx.restore();}

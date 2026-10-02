@@ -1,0 +1,15 @@
+# Boss combat v2
+Built-in image generation, identity references: boss-locomotion-0..3-v1.png.
+
+## assets/boss-combat-0-v2.png
+Edit reference boss sprite sheet into ATTACK animation atlas. Preserve exactly the 4 distinct boss identities in the same row order, colors anatomy armor and facing right three-quarter camera. EXACT 4 columns and 4 rows. Columns: neutral ready pose, anticipation windup, clear melee strike, recovery ready. Fixed camera and consistent torso size throughout each row. Full body including wings tails weapons inside EACH cell with 15% clear margin. No cropped parts, no overlap between cells. Real transparent background, NO colored backdrop, NO floor, NO text, NO detached energy effects. Detailed painterly game sprites. Keep motion modest and anatomically coherent, feet baseline identical. First and last poses nearly identical.
+
+## assets/boss-combat-1-v2.png
+Edit reference boss sprite sheet into ATTACK animation atlas. Preserve exactly the 4 distinct boss identities in the same row order, colors anatomy armor and facing right three-quarter camera. EXACT 4 columns and 4 rows. Columns: neutral ready pose, anticipation windup, clear melee strike, recovery ready. Fixed camera and consistent torso size throughout each row. Full body including wings tails weapons inside EACH cell with 15% clear margin. No cropped parts, no overlap between cells. Real transparent background, NO colored backdrop, NO floor, NO text, NO detached energy effects. Detailed painterly game sprites. Keep motion modest and anatomically coherent, feet baseline identical. First and last poses nearly identical.
+
+## assets/boss-combat-2-v2.png
+Edit reference boss sprite sheet into ATTACK animation atlas. Preserve exactly the 4 distinct boss identities in the same row order, colors anatomy armor and facing right three-quarter camera. EXACT 4 columns and 4 rows. Columns: neutral ready pose, anticipation windup, clear melee strike, recovery ready. Fixed camera and consistent torso size throughout each row. Full body including wings tails weapons inside EACH cell with 15% clear margin. No cropped parts, no overlap between cells. Real transparent background, NO colored backdrop, NO floor, NO text, NO detached energy effects. Detailed painterly game sprites. Keep motion modest and anatomically coherent, feet baseline identical. First and last poses nearly identical.
+
+## assets/boss-combat-3-v2.png
+Edit reference boss sprite sheet into ATTACK animation atlas. Preserve exactly the 2 distinct boss identities in the same row order, colors anatomy armor and facing right three-quarter camera. EXACT 4 columns and 2 rows. Columns: neutral ready pose, anticipation windup, clear melee strike, recovery ready. Fixed camera and consistent torso size throughout each row. Full body including wings tails weapons inside EACH cell with 15% clear margin. No cropped parts, no overlap between cells. Real transparent background, NO colored backdrop, NO floor, NO text, NO detached energy effects. Detailed painterly game sprites. Keep motion modest and anatomically coherent, feet baseline identical. First and last poses nearly identical.
+

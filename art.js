@@ -1,3 +1,4 @@
+import {MONSTER_WALK_SHEETS,BOSS_WALK_SHEETS} from './monster-motion.js';
 import {ITEMS,itemDescription} from './engine.js';
 import {MONSTERS} from './monsters.js';
 const monsterPortraitImages=[];
@@ -33,7 +34,7 @@ export class ArtAssets {
     this.characters = [];
     this.effects = [];
     this.attackFrames=[];this.walkFrames=[];this.loadAttackFrames();this.loadWalkFrames();this.loadNewChampions();
-    this.monsterWalks=[];this.loadMonsterWalks();this.monsters = []; this.monsterFlashes = []; this.reactions = [];
+    this.bossAttackFrames=[];this.bossAttackReady=this.loadBossAttackFrames();this.monsterWalks=[];this.monsterLocomotion=[];this.bossWalks=[];this.monsterWalkReady=this.loadMonsterWalks();this.monsters = []; this.monsterFlashes = []; this.reactions = [];
     this.monstersReady = false;
     this.ready = false;
     this.error = false;
@@ -52,7 +53,26 @@ export class ArtAssets {
       canvas.getContext('2d').putImageData(new ImageData(frame.data,frame.width,frame.height),0,0);canvas.anchorY=frame.anchorY;canvas.bodyHeight=frame.bodyHeight;return canvas;
     });
   }
-  async loadMonsterWalks(){await Promise.all(Array.from({length:7},async(_,group)=>{try{const image=await this.loadImage('/assets/monster-walk-'+group+'-v1.png');const frames=this.characterFrames(image,24);for(let row=0;row<6;row++)this.monsterWalks[group*6+row]=frames.slice(row*4,row*4+4);}catch(error){console.warn('Monster walking atlas',group,error);}}));}
+  async loadMonsterWalks(){await Promise.all([...MONSTER_WALK_SHEETS.map(s=>({...s,boss:false})),...BOSS_WALK_SHEETS.map(s=>({...s,boss:true}))].map(async sheet=>{try{const image=await this.loadImage(sheet.src),frames=this.characterFrames(image,sheet.rows*4);for(let row=0;row<sheet.rows;row++){const cycle=frames.slice(row*4,row*4+4),bodyHeight=Math.max(...cycle.map(f=>f.bodyHeight));for(const f of cycle)f.bodyHeight=bodyHeight;(sheet.boss?this.bossWalks:this.monsterLocomotion)[sheet.first+row]=cycle;}}catch(error){console.warn('Monster locomotion atlas unavailable',sheet.src,error);}}));}
+  async loadBossAttackFrames(){
+    await Promise.all(Array.from({length:4},async(_,group)=>{
+      try{
+        const image=await this.loadImage('/assets/boss-combat-'+group+'-v2.png');
+        const cuts=group===0?[0,.258,.505,.762,1]:group===1?[0,.225,.465,.723,1]:group===2?[0,.235,.474,.726,1]:[0,.533,1];
+        for(let row=0;row<(group===3?2:4);row++){
+          // Split rows before component extraction: neighboring bosses' glows must never merge.
+          const strip=document.createElement('canvas'),sy=Math.round(image.height*cuts[row]);strip.width=image.width;strip.height=Math.round(image.height*cuts[row+1])-sy;
+          strip.getContext('2d').drawImage(image,0,sy,strip.width,strip.height,0,0,strip.width,strip.height);
+          const cycle=this.characterFrames(strip,4),first=cycle[0],pixels=first.getContext('2d').getImageData(0,0,first.width,first.height).data;
+          let top=first.height,bottom=0;
+          for(let y=0;y<first.height;y++)for(let x=0;x<first.width;x++)if(pixels[(y*first.width+x)*4+3]>=128){top=Math.min(top,y);bottom=Math.max(bottom,y);}
+          // Keep the rest-pose scale throughout the strike and recovery.
+          for(const frame of cycle)frame.bodyHeight=Math.max(1,bottom-top+1);
+          this.bossAttackFrames[group*4+row]=cycle;
+        }
+      }catch(error){console.warn('Boss combat atlas unavailable',group,error);}
+    }));
+  }
   tightPortrait(frame){const ctx=frame.getContext('2d',{willReadFrequently:true}),{data}=ctx.getImageData(0,0,frame.width,frame.height);let left=frame.width,top=frame.height,right=0,bottom=0;for(let y=0;y<frame.height;y++)for(let x=0;x<frame.width;x++)if(data[(y*frame.width+x)*4+3]>=32){left=Math.min(left,x);right=Math.max(right,x);top=Math.min(top,y);bottom=Math.max(bottom,y);}const tile=document.createElement('canvas');tile.width=right-left+9;tile.height=bottom-top+9;tile.getContext('2d').drawImage(frame,left,top,right-left+1,bottom-top+1,4,4,right-left+1,bottom-top+1);return tile;}
   loadImage(url) {
     return new Promise((resolve, reject) => {
@@ -111,7 +131,8 @@ export class ArtAssets {
   }
 }
 
-export function equipmentMarkup(item,className=''){const base=item.base??item.id,def=ITEMS[base],slot=def.slot,column=base>=40?(base-40)%5:base%5,atlas=base>=40?'expansion-v1':Math.floor((base%10)/5)+'-v2';return `<span class="equipment-icon ${className}" title="${itemDescription(def,item.tier??0)}" style="background-image:url('/assets/equipment-set-${atlas}.png');background-position:${column*25}% ${slot*100/3}%"></span>`;}
+export function equipmentRegion(base){const def=ITEMS[base],column=base>=40?(base-40)%5:base%5,atlas=base>=40?'expansion-v1':Math.floor((base%10)/5)+'-v2',rows=base>=40?[0,280,520,760,1024]:[0,255,502,750,1024];return {src:'/assets/equipment-set-'+atlas+'.png',x:column*1536/5,y:rows[def.slot],w:1536/5,h:rows[def.slot+1]-rows[def.slot]};}
+export function equipmentMarkup(item,className=''){const base=item.base??item.id,def=ITEMS[base],r=equipmentRegion(base),pad=22;return `<span class="equipment-icon ${className}" title="${itemDescription(def,item.tier??0)}"><svg viewBox="${r.x-pad} ${r.y-pad} ${r.w+pad*2} ${r.h+pad*2}" preserveAspectRatio="xMidYMid meet" aria-hidden="true"><defs><clipPath id="equipment-clip-${base}"><rect x="${r.x}" y="${r.y}" width="${r.w}" height="${r.h}"/></clipPath></defs><image href="${r.src}" width="1536" height="1024" clip-path="url(#equipment-clip-${base})"/></svg></span>`;}
 
 // Segment opaque pose silhouettes instead of assuming generated art obeys grid boundaries.
 export function splitCharacterPixels({data,width,height},expected=8) {
@@ -126,16 +147,16 @@ export function splitCharacterPixels({data,width,height},expected=8) {
   }
   const bodies=parts.slice().sort((a,b)=>b.size-a.size).slice(0,expected);
   if(bodies.length!==expected)throw Error('Expected '+expected+' separate sprites');
-  if(expected===24||expected===16){bodies.sort((a,b)=>(a.top+a.bottom)-(b.top+b.bottom));for(let row=0;row<6;row++)bodies.splice(row*4,4,...bodies.slice(row*4,row*4+4).sort((a,b)=>a.left-b.left));}else bodies.sort((a,b)=>((a.top+a.bottom)/2<height/2?0:1)-((b.top+b.bottom)/2<height/2?0:1)||a.left-b.left);
+  if(expected===4)bodies.sort((a,b)=>a.left-b.left);else if(expected===24||expected===16){bodies.sort((a,b)=>(a.top+a.bottom)-(b.top+b.bottom));for(let row=0;row<6;row++)bodies.splice(row*4,4,...bodies.slice(row*4,row*4+4).sort((a,b)=>a.left-b.left));}else bodies.sort((a,b)=>((a.top+a.bottom)/2<height/2?0:1)-((b.top+b.bottom)/2<height/2?0:1)||a.left-b.left);
   const owner=new Int16Array(parts.length+1);owner.fill(-1);
   bodies.forEach((p,i)=>owner[p.id]=i);
-  for(const p of parts)if(owner[p.id]<0){const x=(p.left+p.right)/2,y=(p.top+p.bottom)/2;let best=Infinity;
+  for(const p of parts)if(owner[p.id]<0&&expected!==4){const x=(p.left+p.right)/2,y=(p.top+p.bottom)/2;let best=Infinity;
     bodies.forEach((b,i)=>{const dx=Math.max(b.left-x,0,x-b.right),dy=Math.max(b.top-y,0,y-b.bottom);const d=dx*dx+dy*dy;if(d<best){best=d;owner[p.id]=i;}});
   }
   // Extend ownership into translucent outlines and glows without rectangular clipping.
   let head=0,tail=0;const assigned=new Int16Array(count);assigned.fill(-1);
-  for(let p=0;p<count;p++)if(labels[p]){assigned[p]=owner[labels[p]];queue[tail++]=p;}
-  while(head<tail){const p=queue[head++],x=p%width,y=Math.floor(p/width);for(const n of [x?p-1:-1,x<width-1?p+1:-1,y?p-width:-1,y<height-1?p+width:-1])if(n>=0&&assigned[n]<0&&data[n*4+3]){assigned[n]=assigned[p];queue[tail++]=n;}}
+  for(let p=0;p<count;p++)if(labels[p]&&owner[labels[p]]>=0){assigned[p]=owner[labels[p]];queue[tail++]=p;}
+  while(head<tail){const p=queue[head++],x=p%width,y=Math.floor(p/width);for(const n of [x?p-1:-1,x<width-1?p+1:-1,y?p-width:-1,y<height-1?p+width:-1])if(n>=0&&assigned[n]<0&&data[n*4+3]&&!(expected===4&&labels[n]&&owner[labels[n]]<0)){assigned[n]=assigned[p];queue[tail++]=n;}}
   const anchors=bodies.map(b=>{let sum=0,n=0;for(let y=b.bottom-45;y<=b.bottom;y++)for(let x=b.left;x<=b.right;x++)if(y>=0&&labels[y*width+x]===b.id){sum+=x;n++;}return {x:n?sum/n:(b.left+b.right)/2,y:b.bottom};});
   let radius=0,up=0,down=0;
   for(let p=0;p<count;p++){const i=assigned[p];if(i<0)continue;radius=Math.max(radius,Math.abs(p%width-anchors[i].x));up=Math.max(up,anchors[i].y-Math.floor(p/width));down=Math.max(down,Math.floor(p/width)-anchors[i].y);}

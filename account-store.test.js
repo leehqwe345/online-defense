@@ -1,5 +1,16 @@
 import test from 'node:test';import assert from 'node:assert/strict';import {mkdtemp,writeFile,readFile} from 'node:fs/promises';import {tmpdir} from 'node:os';import {join} from 'node:path';import {openAccountStore} from './account-store.mjs';
 async function fixture(){const dir=await mkdtemp(join(tmpdir(),'loop-store-'));return {dir,store:await openAccountStore({dir,databaseUrl:'',render:false})};}
+test('equal rounds rank by shortest time, including each account best record',async()=>{
+ const {store}=await fixture();
+ try{
+  const row={mode:'single',hard:0,random:false,round:50,kills:100,seconds:200,date:'2026-10-02'};
+  await store.recordBattle('tie-a',[{...row,accountId:'g_a',name:'A',seconds:400,hard:5,kills:900}]);
+  await store.recordBattle('tie-b',[{...row,accountId:'g_b',name:'B',seconds:250}]);
+  await store.recordBattle('tie-fast',[{...row,accountId:'g_a',name:'A',seconds:200}]);
+  await store.recordBattle('higher',[{...row,accountId:'g_c',name:'C',round:51,seconds:600}]);
+  const ranks=await store.rankings();assert.deepEqual(ranks.map(r=>r.name),['C','A','B']);assert.equal(ranks[1].seconds,200);
+ }finally{await store.close();}
+});
 test('profile and match survive reopen; battle retry is idempotent',async()=>{const {dir,store}=await fixture();await store.ensureProfile('g_a');await store.setNickname('g_a','수호자A');await store.setCard('g_a',14);const rows=[{accountId:'g_a',name:'수호자A',mode:'coop',hard:2,random:false,round:50,kills:300,seconds:500,date:new Date().toISOString()}];await store.recordBattle('battle',rows);await store.recordBattle('battle',rows);await store.close();const next=await openAccountStore({dir,databaseUrl:'',render:false});assert.deepEqual(await next.getProfile('g_a'),{id:'g_a',nickname:'수호자A',lobbyCard:14});assert.equal((await next.history('g_a')).length,1);assert.equal((await next.rankings()).length,1);await next.close();});
 test('concurrent case-insensitive duplicate names and repeated registration are rejected',async()=>{const {store}=await fixture();await Promise.all(['g_a','g_b'].map(id=>store.ensureProfile(id)));const r=await Promise.allSettled([store.setNickname('g_a','Guardian'),store.setNickname('g_b','guardian')]);assert.equal(r.filter(x=>x.status==='fulfilled').length,1);const winner=r[0].status==='fulfilled'?'g_a':'g_b';await assert.rejects(store.setNickname(winner,'다른이름'));await assert.rejects(store.setCard(winner,20));await store.close();});
 test('legacy migration preserves original files and only runs once',async()=>{const dir=await mkdtemp(join(tmpdir(),'loop-import-')),original=JSON.stringify({g_a:{nickname:'기존수호자',lobbyCard:3}});await writeFile(join(dir,'profiles.json'),original);let s=await openAccountStore({dir,databaseUrl:'',render:false});assert.equal((await s.getProfile('g_a')).nickname,'기존수호자');await s.setCard('g_a',5);await s.close();s=await openAccountStore({dir,databaseUrl:'',render:false});assert.equal((await s.getProfile('g_a')).lobbyCard,5);assert.equal(await readFile(join(dir,'profiles.json'),'utf8'),original);await s.close();});

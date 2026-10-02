@@ -1,0 +1,4 @@
+export const MONSTER_WALK_SHEETS=Array.from({length:7},(_,i)=>({src:'/assets/monster-locomotion-'+i+'-v2.png',first:i*6,rows:i===6?4:6}));
+export const BOSS_WALK_SHEETS=Array.from({length:4},(_,i)=>({src:'/assets/boss-locomotion-'+i+'-v1.png',first:i*4,rows:i===3?2:4}));
+export function locomotionRate(monster,speed=2){if(monster.stun>0||!(monster.speed>0)||monster.worldBoss)return 0;return Math.min(18,Math.max(2,8*(monster.speed/.028)*(monster.traitSpeed||1)*(monster.haste>0?1.5:1)*(monster.slow>0?1-Math.min(.8,Math.max(0,monster.slowAmount??.45)):1)))*(speed/2);}
+export function advanceLocomotion(state,monster,clock,speed=2){const next=state||{phase:(monster.id||0)%4,clock},dt=Math.max(0,Math.min(.1,clock-next.clock));next.clock=clock;next.phase=(next.phase+dt*locomotionRate(monster,speed))%4;return next;}

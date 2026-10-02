@@ -1152,6 +1152,10 @@ if(url.pathname==='/api/me'){
       }
 
       const staticFiles={
+ '/monster-motion.js':'monster-motion.js',
+ ...Object.fromEntries(Array.from({length:7},(_,i)=>['/assets/monster-locomotion-'+i+'-v2.png','assets/monster-locomotion-'+i+'-v2.png'])),
+ ...Object.fromEntries(Array.from({length:4},(_,i)=>['/assets/boss-combat-'+i+'-v2.png','assets/boss-combat-'+i+'-v2.png'])),
+ ...Object.fromEntries(Array.from({length:4},(_,i)=>['/assets/boss-locomotion-'+i+'-v1.png','assets/boss-locomotion-'+i+'-v1.png'])),
 '/assets/cosmetic-effects-v4.png':'assets/cosmetic-effects-v4.png',
 '/boss-area.js':'boss-area.js','/cosmetic-bounds.js':'cosmetic-bounds.js','/assets/boss-area-frames-v1.png':'assets/boss-area-frames-v1.png',
  '/assets/map-citadel-default-v1.png':'assets/map-citadel-default-v1.png',

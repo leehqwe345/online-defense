@@ -23,12 +23,12 @@ export const CHAMPION_SKILLS=[
 ].map(([name,cooldown,description],type)=>({type,name,cooldown,description}));
 export const skillArtType=type=>[2,11,0,5,3][type-15]??type;
 export const SKILL_ATLAS='/assets/champion-skills-v1.png';
-export function skillMarkup(c,time){const skill=CHAMPION_SKILLS[c.base];if(!skill)return '';const cooldown=skill.cooldown*(1-talentTotals(c.talents).cooldown);const remaining=Math.max(0,(c.skillReadyAt??time+cooldown)-time);return `<section class="champion-skill"><span class="champion-skill-icon" style="background-position:${skillArtType(c.base)%5*25}% ${Math.floor(skillArtType(c.base)/5)*50}%"></span><div><strong>${skill.name}</strong><small>${skill.description}</small><b>${c.tier<4?'유니크 등급부터 해금':remaining>0?'재사용 '+Math.ceil(remaining)+'초':'자동 사용 준비'} · ${Number(cooldown.toFixed(1))}초</b><small>에픽·레전더리: 스킬별 피해·범위·버프 강화 / 레전더리 축복 2명</small></div></section>`;}
+export function skillMarkup(c,time){const skill=CHAMPION_SKILLS[c.base];if(!skill)return '';const cooldown=skill.cooldown*(1-talentTotals(c.talents).cooldown);const remaining=Math.max(0,(c.skillReadyAt??time+cooldown)-time);return `<section class="champion-skill"><span class="champion-skill-icon" style="background-position:${skillArtType(c.base)%5*25}% ${Math.floor(skillArtType(c.base)/5)*50}%"></span><div><strong>${skill.name}</strong><small>${skill.description}</small><b>${c.tier<3?'레어 등급부터 해금':remaining>0?'재사용 '+Math.ceil(remaining)+'초':'자동 사용 준비'} · ${Number(cooldown.toFixed(1))}초</b><small>에픽·레전더리: 스킬별 피해·범위·버프 강화 / 레전더리 축복 2명</small></div></section>`;}
 function show(g,bi,c,type,point,size=110){g.skillEffects??=[];g.skillEffects.push({source:c.id,type,board:bi,x:point.x,y:point.y,size,born:g.time,until:g.time+1.2});}
 function buff(c,kind,amount,until,now,source){c.supportBuffs??={};const old=c.supportBuffs[kind];if(!old||old.until<=now||old.amount<=amount)c.supportBuffs[kind]={amount,until,source};}
 export function tryChampionSkill(g,b,owners,p,c,near,api){if(c.silenceUntil>g.time)return false;
- const type=c.base,skill=CHAMPION_SKILLS[type];if(c.tier<4||c.destination||c.fearUntil>g.time||['moving','approaching'].includes(c.combatState)||!near.length||g.time<(c.skillReadyAt??Infinity))return false;
- const s=api.stats(c),power=(1+(c.tier-4)*.25)*(1+(s.skillPower||0)),radius=(110+(c.tier-4)*20)*(1+(s.skillRadius||0))/g.mapScale;
+ const type=c.base,skill=CHAMPION_SKILLS[type];if(c.tier<3||c.destination||c.fearUntil>g.time||['moving','approaching'].includes(c.combatState)||!near.length||g.time<(c.skillReadyAt??Infinity))return false;
+ const s=api.stats(c),power=(1+Math.max(0,c.tier-4)*.25)*(1+(s.skillPower||0)),radius=(110+Math.max(0,c.tier-4)*20)*(1+(s.skillRadius||0))/g.mapScale;
  const living=()=>b.monsters.filter(m=>m.hp>0),point=m=>api.position(m.p,m),distance=(a,z)=>Math.hypot(a.x-z.x,a.y-z.y);
  const cluster=near.reduce((best,m)=>living().filter(n=>distance(point(n),point(m))<=radius).length>living().filter(n=>distance(point(n),point(best))<=radius).length?m:best,near[0]);
  const strongest=[...near].sort((a,z)=>Number(z.boss)-Number(a.boss)||z.hp-a.hp)[0];
@@ -42,16 +42,16 @@ export function tryChampionSkill(g,b,owners,p,c,near,api){if(c.silenceUntil>g.ti
  case 0:{visual=point(strongest);const dx=visual.x-c.x,dy=visual.y-c.y,len=Math.hypot(dx,dy)||1;for(const m of living()){const q=point(m),projection=((q.x-c.x)*dx+(q.y-c.y)*dy)/len,cross=Math.abs((q.x-c.x)*dy-(q.y-c.y)*dx)/len;if(m===strongest||(projection>=0&&projection<=s.range/g.mapScale&&cross<30/g.mapScale))hit(m,m===strongest?5:2.5);}break;}
  case 1:for(let i=0;i<3;i++)schedule(g.time+i*.4,around,1.2);break;
  case 2:{visual=c;const targets=living().filter(m=>distance(point(m),c)<=s.range/g.mapScale);targets.forEach(m=>hit(m,3));c.nextAttackBonus=Math.min(1,targets.length*.2);break;}
- case 3:for(const m of area(around)){hit(m,2);if(m.boss)slow(m,.6,2);else m.stun=Math.max(m.stun,2+(c.tier-4)*.3);}break;
+ case 3:for(const m of area(around)){hit(m,2);if(m.boss)slow(m,.6,2);else m.stun=Math.max(m.stun,2+Math.max(0,c.tier-4)*.3);}break;
  case 4:schedule(g.time+1,around,4);for(let i=2;i<=4;i++)schedule(g.time+i,around,.8);break;
  case 5:for(let i=0;i<3;i++)schedule(g.time+i*.5,around,1);break;
- case 6:case 9:{let allies=owners.flatMap(o=>o.champions).filter(a=>a.base!==9);if(type===6)allies=allies.filter(a=>distance(a,c)<=220/g.mapScale);else allies=randomUnbuffedAllies(owners,c,g.time,c.tier===6?2:1);if(!allies.length){c.skillReadyAt=g.time;return false;}const kind=type===6?'speed':Math.random()<.5?'damage':'speed';for(const a of allies){buff(a,kind,(type===6?.35:.6)+(c.tier-4)*.1,g.time+(type===6?6:8),g.time,c.id);if(type===9){c.supportCast={target:a.id,kind,until:g.time+2};g.effects.push({source:c.id,target:a.id,x:c.x,y:c.y,tx:a.x,ty:a.y,born:g.time,until:g.time+.6,type:9,amount:0,board:g.boards.indexOf(b),support:true});}if(type===9)a.fearUntil=0;show(g,g.boards.indexOf(b),c,type,a,85);}visual=c;break;}
+ case 6:case 9:{let allies=owners.flatMap(o=>o.champions).filter(a=>a.base!==9);if(type===6)allies=allies.filter(a=>distance(a,c)<=220/g.mapScale);else allies=randomUnbuffedAllies(owners,c,g.time,c.tier===6?2:1);if(!allies.length){c.skillReadyAt=g.time;return false;}const kind=type===6?'speed':Math.random()<.5?'damage':'speed';for(const a of allies){buff(a,kind,(type===6?.35:.6)+Math.max(0,c.tier-4)*.1,g.time+(type===6?6:8),g.time,c.id);if(type===9){c.supportCast={target:a.id,kind,until:g.time+2};g.effects.push({source:c.id,target:a.id,x:c.x,y:c.y,tx:a.x,ty:a.y,born:g.time,until:g.time+.6,type:9,amount:0,board:g.boards.indexOf(b),support:true});}if(type===9)a.fearUntil=0;show(g,g.boards.indexOf(b),c,type,a,85);}visual=c;break;}
  case 7:for(const m of area(around)){hit(m,m.poison>0?3:1.5);const poison=api.damage(m,s.attack*.4*power,'독',s);if(poison>m.poison){m.poison=poison;m.poisonSource=c.id;m.poisonOwner=p.id;}}break;
  case 8:{const target=[...near].sort((a,z)=>z.hp-a.hp)[0];visual=point(target);schedule(g.time+3,visual,5,target.id);break;}
  case 10:{let target=cluster;const visited=new Set();for(let i=0;i<8;i++){hit(target,visited.has(target.id)?.35:1.25);show(g,g.boards.indexOf(b),c,type,point(target),65);visited.add(target.id);const candidates=living().filter(m=>distance(point(m),point(target))<=180/g.mapScale).sort((a,z)=>Number(visited.has(a.id))-Number(visited.has(z.id))||distance(point(a),point(target))-distance(point(z),point(target)));if(!candidates.length)break;target=candidates[0];}break;}
  case 11:{const target=[...near].sort((a,z)=>a.hp-z.hp)[0];visual=point(target);hit(target,5);if(target.hp<=0)c.skillReadyAt=g.time+skill.cooldown*(1-talentTotals(c.talents).cooldown)*.5;break;}
  case 12:{visual=point(strongest);const direction=Math.atan2(visual.y-c.y,visual.x-c.x);for(const m of living()){const q=point(m),angle=Math.atan2(q.y-c.y,q.x-c.x),delta=Math.atan2(Math.sin(angle-direction),Math.cos(angle-direction));if(distance(q,c)<=Math.max(s.range,240)/g.mapScale&&Math.abs(delta)<=Math.PI/4)hit(m,3.5,'화');}break;}
- case 13:for(const m of living()){const gap=Math.min(Math.abs(m.p-cluster.p),1-Math.abs(m.p-cluster.p));if(gap<=.08+(c.tier-4)*.015){hit(m,3);slow(m,.5,3);m.stun=Math.max(m.stun,m.boss?.15:.6);}}break;
+ case 13:for(const m of living()){const gap=Math.min(Math.abs(m.p-cluster.p),1-Math.abs(m.p-cluster.p));if(gap<=.08+Math.max(0,c.tier-4)*.015){hit(m,3);slow(m,.5,3);m.stun=Math.max(m.stun,m.boss?.15:.6);}}break;
  case 14:visual=point(strongest);hit(strongest,strongest.boss?9:6);break;
  case 15:for(const m of near.slice(0,4)){hit(m,3);m.skillShred=Math.max(m.skillShred||0,.2*(m.defenses.includes('방깎저항')?.35:1));m.skillShredUntil=g.time+4;}visual=c;break;
  case 16:for(let n=0;n<4;n++)hit(strongest,1.2);visual=point(strongest);break;
@@ -65,7 +65,7 @@ export function tryChampionSkill(g,b,owners,p,c,near,api){if(c.silenceUntil>g.ti
 }
 export function updateChampionSkills(g,b,owners,api){
  const bi=g.boards.indexOf(b);g.skillEffects=(g.skillEffects||[]).filter(e=>e.until>g.time);
- for(const p of owners)for(const c of p.champions)if(c.tier>=4)c.skillReadyAt??=g.time+CHAMPION_SKILLS[c.base].cooldown*(1-talentTotals(c.talents).cooldown);
+ for(const p of owners)for(const c of p.champions)if(c.tier>=3)c.skillReadyAt??=g.time+CHAMPION_SKILLS[c.base].cooldown*(1-talentTotals(c.talents).cooldown);
  for(const m of b.monsters)if(m.skillShredUntil<=g.time)m.skillShred=0;
  const pending=g.skillPending||[];for(const e of pending.filter(e=>e.board===bi&&e.targetId!==undefined)){const target=b.monsters.find(m=>m.id===e.targetId);if(target)e.center=api.position(target.p,target);}g.skillPending=pending.filter(e=>e.board!==bi||e.at>g.time);
  for(const e of pending.filter(e=>e.board===bi&&e.at<=g.time)){

@@ -1,3 +1,4 @@
+import {advanceLocomotion,locomotionRate} from './monster-motion.js';
 import {monsterDefinition,traitDefinition} from './monsters.js';
 import { position } from './engine.js';
 import { monsterSpriteIndex, monsterName, bossVariant } from './art.js';
@@ -14,8 +15,8 @@ const keyFor = (board, id) => `${board}:${id}`;
 // Network events are deduplicated separately from the render clock, so pausing
 // freezes the animation and a monster removed between snapshots can still die visibly.
 export class MonsterVisuals {
-  constructor(art) { this.art = art; this.reset(); if(typeof Image!=='undefined'){this.attackSheets=['a','b','c'].map(v=>{const i=new Image();i.src='/assets/boss-attacks-'+v+'-v1.png';return i;});this.hitMaterials=new Image();this.hitMaterials.src='/assets/monster-hit-materials-v1.png';this.damageStages=new Image();this.damageStages.src='/assets/boss-damage-stages-v1.png';this.bossSheet=new Image();this.bossSheet.src='/assets/boss-expansion-v1.png';this.bossArts=['/assets/boss-jade-v2.png','/assets/boss-ember-v2.png'].map(src=>{const image=new Image();image.src=src;return image;});} }
-  reset() { this.attackStarts=new Map();this.attackBorn=new Map();this.hits = new Map(); this.deaths = new Map(); this.seenDeaths = new Map(); }
+  constructor(art) { this.art = art; this.reset(); if(typeof Image!=='undefined'){this.hitMaterials=new Image();this.hitMaterials.src='/assets/monster-hit-materials-v1.png';this.damageStages=new Image();this.damageStages.src='/assets/boss-damage-stages-v1.png';this.bossSheet=new Image();this.bossSheet.src='/assets/boss-expansion-v1.png';this.bossArts=['/assets/boss-jade-v2.png','/assets/boss-ember-v2.png'].map(src=>{const image=new Image();image.src=src;return image;});} }
+  reset() { this.walkStates=new Map();this.attackStarts=new Map();this.attackBorn=new Map();this.hits = new Map(); this.deaths = new Map(); this.seenDeaths = new Map(); }
   receive(game, clock) {
     const alive = new Set();
     game.boards.forEach((board, bi) => {
@@ -30,6 +31,7 @@ export class MonsterVisuals {
         }
       }
     });
+    for(const key of this.walkStates.keys())if(!alive.has(key))this.walkStates.delete(key);
     for(const [key] of this.attackBorn)if(!alive.has(key)){this.attackBorn.delete(key);this.attackStarts.delete(key);}
     for (const [key] of this.hits) if (!alive.has(key)) this.hits.delete(key);
     for (const event of game.deaths || []) {
@@ -47,7 +49,11 @@ export class MonsterVisuals {
   sprite(ctx, monster, width, flash = 0, walkFrame = null, attackAge = -1) {
     ctx.save(); ctx.scale(1, 1 / (this.verticalScale || 1));
     const variant=bossVariant(monster);
-    if(monster.boss&&this.showEffects!==false&&attackAge>=0&&attackAge<.6){const sheet=this.attackSheets?.[variant<2?0:variant<8?1:2];if(sheet?.naturalWidth){const rows=variant<2?2:6,row=variant<2?variant:variant<8?variant-2:variant-8,sw=sheet.naturalWidth/4,sh=sheet.naturalHeight/rows,frame=Math.min(3,Math.floor(attackAge/.15));const h=width*Math.min(1.3,sh/sw);ctx.drawImage(sheet,frame*sw,row*sh,sw,sh,-width/2,-h+width*.22,width,h);ctx.restore();return;}}
+    if(monster.boss){
+      const cycle=this.art.bossAttackFrames?.[variant],attacking=attackAge>=0&&attackAge<.6;
+      const tile=attacking&&cycle?cycle[Math.min(3,Math.floor(attackAge/.15))]:walkFrame||cycle?.[0]||this.art.bossWalks?.[variant]?.[0];
+      if(tile){const scale=width/tile.bodyHeight,w=tile.width*scale,h=tile.height*scale;ctx.drawImage(tile,-w/2,-h*tile.anchorY+width*.1,w,h);ctx.restore();return;}
+    }
 if(monster.boss&&variant>=2&&this.bossSheet?.complete&&this.bossSheet.naturalWidth){const i=variant-2,sw=this.bossSheet.naturalWidth/4,sh=this.bossSheet.naturalHeight/3;ctx.drawImage(this.bossSheet,i%4*sw+4,Math.floor(i/4)*sh+4,sw-8,sh-8,-width/2,-width*.78,width,width);ctx.restore();return;}const bossArt=monster.boss?this.bossArts?.[variant]:null;if(bossArt?.complete&&bossArt.naturalWidth){const h=width*bossArt.naturalHeight/bossArt.naturalWidth;ctx.drawImage(bossArt,-width/2,-h*.78,width,h);ctx.restore();return;}
     const index = monsterSpriteIndex(monster), tile = walkFrame||this.art.monsters[index];
     if (tile) {
@@ -91,19 +97,19 @@ if(monster.boss&&variant>=2&&this.bossSheet?.complete&&this.bossSheet.naturalWid
     const hit = this.showHits===false?null:this.hits.get(keyFor(board, monster.id)), age = hit ? clock - hit.start : 10;
     const progress = age >= 0 && age < 0.3 ? age / 0.3 : 1;
     const pulse = Math.sin(progress * Math.PI) * (1 - progress);
-    const moving = !(monster.stun > 0), phase = clock * (monster.slow > 0 ? 5 : 10) + monster.id;
+    const moving = locomotionRate(monster,this.animationSpeed)>0, phase = clock * (monster.slow > 0 ? 5 : 10) + monster.id;
     const floating = monsterDefinition(monster).floating;
     const bob = moving ? Math.sin(phase) * (floating ? 2.2 : 1.1) : 0;
     const dx = (hit?.dx || 0) * pulse * (monster.boss ? 5 : 10), dy = (hit?.dy || 0) * pulse * 5;
     ctx.save(); ctx.translate(x, y);
     ctx.fillStyle = '#0006'; ctx.beginPath(); ctx.ellipse(0, 10, width * 0.25, width * 0.07, 0, 0, Math.PI * 2); ctx.fill();
     if (selected) { ctx.strokeStyle = '#fff2b4'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.ellipse(0, 9, width * 0.36, width * 0.16, 0, 0, Math.PI * 2); ctx.stroke(); }
-    ctx.save(); ctx.translate(dx, dy + bob); ctx.rotate(pulse * 0.12 * (hit?.dx || 1));
+    ctx.save(); ctx.translate(dx, dy + bob); ctx.rotate(monster.boss?0:pulse * 0.12 * (hit?.dx || 1));
     ctx.scale(monster.p >= 0.5 ? -1 : 1, 1);
-    const squash = moving && [0, 9].includes(monster.family) ? Math.sin(phase) * 0.035 : 0;
-    ctx.scale(1 + squash + pulse * 0.16, 1 - squash - pulse * 0.18);
+    const squash = !monster.boss && moving && [0, 9].includes(monster.family) ? Math.sin(phase) * 0.035 : 0;
+    if(!monster.boss)ctx.scale(1 + squash + pulse * 0.16, 1 - squash - pulse * 0.18);
     if (this.showEffects!==false && monster.slow > 0) ctx.filter = 'saturate(.65) brightness(1.12)';
-    const frames=this.art.monsterWalks?.[monsterSpriteIndex(monster)];const walkFrame=frames?.[moving?Math.floor(monster.p*300+monster.id)%4:0];this.sprite(ctx, monster, width, age >= 0 && age < 0.12 ? (1 - age / 0.12) * 0.9 : 0,walkFrame,monster.basicAttack?clock-(this.attackStarts?.get(keyFor(board,monster.id))??-100):-1);
+    const walkKey=keyFor(board,monster.id),motion=advanceLocomotion(this.walkStates.get(walkKey),monster,clock,this.animationSpeed);this.walkStates.set(walkKey,motion);const frames=monster.boss?this.art.bossWalks?.[variantForWalk(monster)]:this.art.monsterLocomotion?.[monster.family];const walkFrame=monster.boss&&!moving?null:frames?.[Math.floor(motion.phase)];this.sprite(ctx, monster, width, age >= 0 && age < 0.12 ? (1 - age / 0.12) * 0.9 : 0,walkFrame,monster.basicAttack?clock-(this.attackStarts?.get(keyFor(board,monster.id))??-100):-1);
     this.bossWounds(ctx,monster,width);
     ctx.restore();
     this.materialHit(ctx,monster,age,width,dx,dy);
@@ -135,3 +141,5 @@ if(monster.boss&&variant>=2&&this.bossSheet?.complete&&this.bossSheet.naturalWid
     }
   }
 }
+
+function variantForWalk(monster){return bossVariant(monster);}
